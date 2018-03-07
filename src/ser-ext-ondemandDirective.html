@@ -1,0 +1,26 @@
+<div class="root-container"
+     ng-class="{'root-container-{{vm.theme}}':true}"
+     tabindex="0"
+     q2g-shortcut-scope="rootelement"
+     style="height:100%; width:100%">
+     
+     <div ng-if="!vm.reportError">
+        <button ng-click="vm.action()" class="lui-button  lui-button--rounded  lui-button--info">
+            {{vm.status}} 
+            <div class="spinner" ng-if="vm.status === 'Running ...'">
+                <div class="bounce1"></div>
+                <div class="bounce2"></div>
+                <div class="bounce3"></div>
+            </div>
+        </button>
+     </div>
+
+     <div ng-if="vm.reportError">
+         {{vm.status}}
+     </br>
+         <button ng-click="vm.restart()" class="lui-button  lui-button--rounded  lui-button--info">
+            Restart
+        </button>
+    </div>
+     
+</div>
