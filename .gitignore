@@ -1,0 +1,20 @@
+## Typescript q2g Files
+*.map
+*.js
+*.css
+dist/*.d.ts
+package-lock.json
+
+## Typescript q2g Folders
+node_modules/
+dist/
+
+## Include
+!q2g-ext-onDemandSenseReport.js
+
+## Standard vccode
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
