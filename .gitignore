@@ -10,7 +10,7 @@ node_modules/
 dist/
 
 ## Include
-!q2g-ext-onDemandSenseReport.js
+!ser-ext-ondemand.js
 
 ## Standard vccode
 .vscode/*
