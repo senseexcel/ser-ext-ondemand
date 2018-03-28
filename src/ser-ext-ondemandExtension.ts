@@ -44,7 +44,6 @@ function getListOfLib(app: EngineAPI.IApp): any {
                 label: item.qName
             })
         }
-        console.log("returnVal")
 
         return returnVal;
 
@@ -84,13 +83,10 @@ let parameter = {
                             component: "dropdown",
                             options: function(a)
                             {
-                                console.log(a.properties.templateContentLibrary);
-                                console.log("scope2.dataCon", scope2.dataCon);
                                 return scope2.dataCon[a.properties.templateContentLibrary];
                             },
                             show: function (data: any) {
                                 if (data.properties.templateContentLibrary!==null) {
-                                    console.log("asdf", (data.properties.templateContentLibrary));
                                     return true;
                                 }
                                 return false;
@@ -167,7 +163,6 @@ export = {
 
             let index: number = 0;
             for (const item of list) {
-                console.log("item", item);
                 let inApp: boolean = false;
                 if (item.qAppSpecific === true) {
                     inApp = true;
