@@ -22,6 +22,40 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", BookmarkDirectiveFac
     "OndemandExtension");
 //#endregion
 
+function test(params) {
+    return new Promise((resolve, reject) => {
+        setTimeout(() => {
+            resolve({ value: "a", label: "AA"})
+        }, 10)
+    })
+    // return { value: "a", label: "AA"};
+}
+
+function getListOfLib(app: EngineAPI.IApp): any {
+    console.log("getListOfLib")
+    app.getContentLibraries()
+    .then((res) => {
+        let list: Array<EngineAPI.IContentLibraryListItem> = res as any;
+        let returnVal = [];
+
+        for (const item of list) {
+            returnVal.push({
+                value: item.qName,
+                label: item.qName
+            })
+        }
+        console.log("returnVal")
+
+        return returnVal;
+
+    })
+    .catch((error) => {
+        console.error("ERROR", error);
+    })
+}
+
+let scope2 : any;
+
 //#region extension properties
 let parameter = {
     type: "items",
@@ -35,10 +69,32 @@ let parameter = {
                     label: "Configuration",
                     grouped: true,
                     items: {
-                        template: {
+                        templateContentLibrary: {
+                            ref: "properties.templateContentLibrary",
+                            label: "choose Library",
+                            component: "dropdown",
+                            options: function()
+                            {
+                                return scope2.dataLib;
+                            }
+                        },
+                        templateContent: {
                             ref: "properties.template",
-                            label: "enter the template name",
-							component: "textarea",
+                            label: "choose Content",
+                            component: "dropdown",
+                            options: function(a)
+                            {
+                                console.log(a.properties.templateContentLibrary);
+                                console.log("scope2.dataCon", scope2.dataCon);
+                                return scope2.dataCon[a.properties.templateContentLibrary];
+                            },
+                            show: function (data: any) {
+                                if (data.properties.templateContentLibrary!==null) {
+                                    console.log("asdf", (data.properties.templateContentLibrary));
+                                    return true;
+                                }
+                                return false;
+                            }
                         },
                         output: {
                             ref: "properties.output",
@@ -98,7 +154,64 @@ export = {
     initialProperties: { },
     template: template,
     controller: ["$scope", function (scope: utils.IVMScope<OnDemanExtension>) {
+        scope2 = scope as any;
         scope.vm = new OnDemanExtension(utils.getEnigma(scope));
+
+        let app: EngineAPI.IApp = scope.vm.model.app;
+
+        app.getContentLibraries()
+        .then((res) => {
+            let list: Array<EngineAPI.IContentLibraryListItem> = res as any;
+            let returnVal = [];
+            let returnValContent = [];
+
+            let index: number = 0;
+            for (const item of list) {
+                returnVal.push({
+                    value: index,
+                    label: item.qName
+                })
+                index++;
+
+                let items = [];
+
+                app.getLibraryContent(item.qName)
+                .then((content: any) => {
+                    console.log(content);
+
+
+                    for (const value of content) {
+                        console.log(value)
+                        let lib = (value.qUrl as string).split("/")[2];
+                        let name = (value.qUrl as string).split("/")[3];
+                        console.log(name)
+                        items.push({
+                            value: `content://${lib}/${name}`,
+                            label: name
+                        });
+                    }
+                })
+                .catch((error) => {
+                    console.error("ERROR", error);
+                });
+
+                returnValContent.push(items);
+
+
+            }
+
+            (scope as any).dataLib = returnVal;
+            (scope as any).dataCon = returnValContent;
+
+        
+
+
+        })
+        .catch((error) => {
+            console.error("ERROR", error);
+        });
+
+       
     }]
 };
 
