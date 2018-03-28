@@ -167,9 +167,14 @@ export = {
 
             let index: number = 0;
             for (const item of list) {
+                console.log("item", item);
+                let inApp: boolean = false;
+                if (item.qAppSpecific === true) {
+                    inApp = true;
+                }
                 returnVal.push({
                     value: index,
-                    label: item.qName
+                    label: item.qAppSpecific===true?"in App":item.qName
                 })
                 index++;
 
@@ -177,19 +182,17 @@ export = {
 
                 app.getLibraryContent(item.qName)
                 .then((content: any) => {
-                    console.log(content);
 
 
                     for (const value of content) {
-                        console.log(value)
                         let lib = (value.qUrl as string).split("/")[2];
                         let name = (value.qUrl as string).split("/")[3];
-                        console.log(name)
                         items.push({
-                            value: `content://${lib}/${name}`,
+                            value: `content://${inApp===true?"":lib}/${name}`,
                             label: name
                         });
                     }
+
                 })
                 .catch((error) => {
                     console.error("ERROR", error);

@@ -77,21 +77,28 @@ class OnDemandController implements ng.IController {
         this.model.app.evaluate("SER.Status('" + this.taskId + "')")
             .then((status) => {
             console.log("status", status);
-            switch (status) {
+            let statusObject = JSON.parse(status);
+            switch (statusObject.status) {
                 case "-1":
+                    console.log("Error log from SER: ", statusObject.log)
                     clearInterval(this.refreshIntervalId);
                     this.status = "Error, confirm Logs";
                     this.state = "finished";
                     this.reportError = true;
                     break;
-                case "0":
-                    this.status = "Starting ...";
-                    break;
                 case "1":
-                    this.status = "Running ...";
+                    this.status = "Running ... (click to abort)";
                     this.state = "load";
                     break;
-                case "100":
+                case "2":
+                    this.status = "Start uploading ...(click to abort)";
+                    this.state = "load";
+                    break;
+                case "3":
+                    this.status = "Uploading finished ...(click to abort)";
+                    this.state = "load";
+                    break;
+                case "5":
                     clearInterval(this.refreshIntervalId);
                     this.status = "Download Report";
                     this.state = "finished";
@@ -110,10 +117,11 @@ class OnDemandController implements ng.IController {
     };
 
     downloadReport () {
-        this.model.app.evaluate("SER.Download('" + this.taskId + "')")
-            .then((link) => {
-            console.log("link", link);
-            window.open("" + link);
+        this.model.app.evaluate("SER.Status('" + this.taskId + "')")
+            .then((status) => {
+            let statusObject = JSON.parse(status);
+            console.log("link", statusObject.link);
+            window.open("" + statusObject.link);
             this.state = "load";
             this.status = "Generate Report";
         })
@@ -126,14 +134,16 @@ class OnDemandController implements ng.IController {
         console.log("### call fcn createReport ###"),
         console.log("callFcn", "SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')");
         this.model.app.evaluate("SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')")
-            .then((taskId) => {
-            console.log("### taskId:", taskId);
-            if(taskId === "-1") {
+            .then((status) => {
+                console.log("status", status);
+                let statusObject = JSON.parse(status);
+            console.log("### taskId:", statusObject.taskId);
+            if(statusObject.taskId === "-1") {
                 this.status = "Wrong Task ID";
                 this.reportError = true;
                 return;
             }
-            this.taskId = taskId;
+            this.taskId = statusObject.taskId;
             this.status = "Running ...";
             this.refreshIntervalId = setInterval(() => {
                 this.getStatus();
