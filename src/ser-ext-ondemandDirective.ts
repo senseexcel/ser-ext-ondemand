@@ -72,33 +72,41 @@ class OnDemandController implements ng.IController {
     }
 
     getStatus () {
+        let reqestJson = {
+            "taskId": this.taskId
+        }
         console.log("### call fcn getStatus ###"),
-        console.log("callFcn", "SER.Status('" + this.taskId + "')");
+        console.log("callFcn", "SER.Status('" + JSON.stringify(reqestJson) + "')");
         this.model.app.evaluate("SER.Status('" + this.taskId + "')")
             .then((status) => {
             console.log("status", status);
-            let statusObject = JSON.parse(status);
-            switch (statusObject.status) {
-                case "-1":
-                    console.log("Error log from SER: ", statusObject.log)
+            let statusObject;
+                try {
+                    statusObject = JSON.parse(status);
+                } catch (error) {
+                    console.error("error", error);
+                }
+            switch (statusObject.Status) {
+                case -1:
+                    console.log("Error log from SER: ", statusObject.Log)
                     clearInterval(this.refreshIntervalId);
                     this.status = "Error, confirm Logs";
                     this.state = "finished";
                     this.reportError = true;
                     break;
-                case "1":
+                case 1:
                     this.status = "Running ... (click to abort)";
                     this.state = "load";
                     break;
-                case "2":
+                case 2:
                     this.status = "Start uploading ...(click to abort)";
                     this.state = "load";
                     break;
-                case "3":
+                case 3:
                     this.status = "Uploading finished ...(click to abort)";
                     this.state = "load";
                     break;
-                case "5":
+                case 5:
                     clearInterval(this.refreshIntervalId);
                     this.status = "Download Report";
                     this.state = "finished";
@@ -117,11 +125,19 @@ class OnDemandController implements ng.IController {
     };
 
     downloadReport () {
-        this.model.app.evaluate("SER.Status('" + this.taskId + "')")
+        let reqestJson = {
+            "taskId": this.taskId
+        }
+        this.model.app.evaluate("SER.Status('" + JSON.stringify(reqestJson) + "')")
             .then((status) => {
-            let statusObject = JSON.parse(status);
-            console.log("link", statusObject.link);
-            window.open("" + statusObject.link);
+                let statusObject;
+                try {
+                    statusObject = JSON.parse(status);
+                } catch (error) {
+                    console.error("error", error);
+                }
+            console.log("link", statusObject.Link);
+            window.open("" + statusObject.Link);
             this.state = "load";
             this.status = "Generate Report";
         })
@@ -131,19 +147,29 @@ class OnDemandController implements ng.IController {
     };
 
     createReport () {
+        let reqestJson = {
+            "template": this.properties.template,
+            "output": this.properties.output,
+            "templauserSelectionte": this.properties.useSelection
+        }
         console.log("### call fcn createReport ###"),
         console.log("callFcn", "SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')");
         this.model.app.evaluate("SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')")
             .then((status) => {
                 console.log("status", status);
-                let statusObject = JSON.parse(status);
-            console.log("### taskId:", statusObject.taskId);
-            if(statusObject.taskId === "-1") {
+                let statusObject;
+                try {
+                    statusObject = JSON.parse(status);
+                } catch (error) {
+                    console.error("error", error);
+                }
+            console.log("### taskId:", statusObject.TaskId);
+            if(statusObject.TaskId === "-1") {
                 this.status = "Wrong Task ID";
                 this.reportError = true;
                 return;
             }
-            this.taskId = statusObject.taskId;
+            this.taskId = statusObject.TaskId;
             this.status = "Running ...";
             this.refreshIntervalId = setInterval(() => {
                 this.getStatus();
