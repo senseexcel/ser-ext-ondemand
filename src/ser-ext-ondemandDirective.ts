@@ -215,6 +215,10 @@ class OnDemandController implements ng.IController {
                         this.status = "Uploading finished ...(click to abort)";
                         this.state = SERState.loading;
                         break;
+                    case 4:
+                        this.status = "Aborted (click to start again)";
+                        this.state = SERState.finished;
+                        break;
                     case 5:
                         this.status = "Download Report";
                         this.link = statusObject.Link;
