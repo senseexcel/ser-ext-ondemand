@@ -3,14 +3,15 @@
      tabindex="0"
      q2g-shortcut-scope="rootelement"
      style="height:100%; width:100%">
+     
+     
      <div style="position:absolute">
-        <button ng-click="vm.action()" 
-                ng-href="vm.link" 
+        <button ng-click="vm.action()"
                 class="lui-button  lui-button--rounded  lui-button--info"
                 q2g-shortcut
                 shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
                 shortcut-action="vm.action()">
-            {{vm.status}} 
+            <a ng-href="{{vm.link}}" target="_blank">{{vm.status}}</a>
             <div class="spinner" ng-if="vm.status === 'Running ...'">
                 <div class="bounce1"></div>
                 <div class="bounce2"></div>
