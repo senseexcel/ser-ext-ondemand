@@ -4,23 +4,21 @@
      q2g-shortcut-scope="rootelement"
      style="height:100%; width:100%">
      
-     <div ng-if="!vm.reportError">
-        <button ng-click="vm.action()" class="lui-button  lui-button--rounded  lui-button--info">
-            {{vm.status}} 
-            <div class="spinner" ng-if="vm.status === 'Running ...'">
+     
+     <div style="position:absolute">
+        <button ng-click="vm.action()"
+                class="lui-button  lui-button--rounded  lui-button--info"
+                q2g-shortcut
+                shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
+                shortcut-action="vm.action()">
+            <a ng-href="{{vm.link}}" target="_blank">{{vm.status}}</a>
+            <div class="spinner" ng-if="vm.state === 0">
                 <div class="bounce1"></div>
                 <div class="bounce2"></div>
                 <div class="bounce3"></div>
             </div>
         </button>
      </div>
-
-     <div ng-if="vm.reportError">
-         {{vm.status}}
-     </br>
-         <button ng-click="vm.restart()" class="lui-button  lui-button--rounded  lui-button--info">
-            Restart
-        </button>
-    </div>
-     
+     <div style="position:relative; top: 25px" ng-if="vm.reportError">Check Logs</div>
+    <q2g-identifier show="vm.isEditMode()"></q2g-identifier>
 </div>
