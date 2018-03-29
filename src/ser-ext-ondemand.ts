@@ -1,8 +1,8 @@
 //#region Imports
 import * as qvangular from "qvangular";
 import * as qlik from "qlik";
-import * as template from "text!./ser-ext-ondemandExtension.html";
-import { utils, logging, services, version } from "../node_modules/davinci.js/dist/umd/daVinci";
+import * as template from "text!./ser-ext-ondemand.html";
+import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { BookmarkDirectiveFactory } from "./ser-ext-ondemandDirective";
 //#endregion
 
@@ -184,16 +184,9 @@ export = {
                 });
 
                 returnValContent.push(items);
-
-
             }
-
             (scope as any).dataLib = returnVal;
             (scope as any).dataCon = returnValContent;
-
-        
-
-
         })
         .catch((error) => {
             console.error("ERROR", error);

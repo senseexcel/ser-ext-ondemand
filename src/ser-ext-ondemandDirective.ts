@@ -1,7 +1,7 @@
 //#region imports
-import { utils, logging, directives } from "../node_modules/davinci.js/dist/umd/daVinci";
+import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import * as template from "text!./ser-ext-ondemandDirective.html";
-import "css!./main.css";
+import "css!./ser-ext-ondemandDirective.css";
 //#endregion
 
 enum SERState {
@@ -139,7 +139,7 @@ class OnDemandController implements ng.IController {
             selectionMode: this.properties.useSelection
         }
         let serCall: string = `SER.Create('${JSON.stringify(reqestJson)}')`;
-        this.logger.debug("call fcn createRepor",serCall);
+        this.logger.debug("call fcn createRepor", serCall);
 
         this.model.app.evaluate(serCall)
             .then((response) => {
@@ -196,7 +196,14 @@ class OnDemandController implements ng.IController {
         this.model.app.evaluate(serCall)
             .then((response) => {
                 this.logger.debug("response from status call", response);
-                let statusObject: ISERResponseStatus = JSON.parse(response);
+
+                let statusObject: ISERResponseStatus
+                try {
+                    statusObject = JSON.parse(response);
+                } catch (error) {
+                    this.logger.error("Error log from SER: ", statusObject.Log)
+                    this.state = SERState.error;
+                }
 
                 switch (statusObject.Status) {
                     case -1:
