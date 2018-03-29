@@ -27,21 +27,21 @@ interface ISERRequestStatus {
 
 class OnDemandController implements ng.IController {
 
-    status: string = "Generate Report";
-    link: string;
     editMode: boolean;
     element: JQuery;
-    timeout: ng.ITimeoutService;
-    taskId: string;
-    reportError = false;
-    refreshIntervalId: number;
-    refreshIntervalTime: number;
+    link: string;
     properties = {
         template: " ",
         useSelection: " ",
         output: " "
     };
-
+    reportError = false;
+    refreshIntervalId: number;
+    refreshIntervalTime: number;
+    running: boolean = false;
+    status: string = "Generate Report";
+    taskId: string;
+    timeout: ng.ITimeoutService;
 
     //#region logger
     private _logger: logging.Logger;
@@ -69,13 +69,16 @@ class OnDemandController implements ng.IController {
         if (v !== this._state) {
             this._state = v;
             if (v === SERState.error) {
+                this.running = false;
                 this.reportError = true;
                 clearInterval(this.refreshIntervalId);
                 this.status = "Error while running - Retry";
                 this.state = SERState.ready;
             }
-            if (v === SERState.finished)
+            if (v === SERState.finished) {
+                this.running = false;
                 clearInterval(this.refreshIntervalId);
+            }
         }
     }
     //#endregion
@@ -133,6 +136,7 @@ class OnDemandController implements ng.IController {
     }
 
     private createReport () {
+        this.running = true;
         let reqestJson = {
             template: this.properties.template,
             output: this.properties.output,
