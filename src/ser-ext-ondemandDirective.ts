@@ -129,7 +129,7 @@ class OnDemandController implements ng.IController {
         };
         this.element = element;
         this.timeout = timeout;
-        this.refreshIntervalTime = 1000;
+        this.refreshIntervalTime = 2000;
     }
 
     private createReport () {
@@ -265,10 +265,12 @@ class OnDemandController implements ng.IController {
             case SERState.loading:
                 this.abortReport();
                 break;
-            case SERState.finished:
-                this.link = null;
+            case SERState.finished:                
                 this.status = "Generate Report"
                 this.state = SERState.ready;
+                setTimeout(() => {
+                    this.link = null;
+                }, 1000);
                 break;
             default:
                 break;
