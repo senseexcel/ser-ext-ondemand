@@ -234,9 +234,9 @@ class OnDemandController implements ng.IController {
         let reqestJson: ISERRequestStatus = {
             TaskId: this.taskId
         }
-        let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
+        let serCall: string = `SER.Abort('${JSON.stringify(reqestJson)}')`;
 
-        this.logger.debug("call fcn getStatus", serCall);
+        this.logger.debug("call fcn abortReport", serCall);
         this.model.app.evaluate(serCall)
             .then(() => {
                 this.logger.debug("report generation aborted");
