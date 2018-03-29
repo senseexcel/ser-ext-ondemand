@@ -156,7 +156,6 @@
                         var items = [];
                         app.getLibraryContent(item.qName)
                             .then(function (content) {
-                            // xlsx xls
                             for (var _i = 0, content_1 = content; _i < content_1.length; _i++) {
                                 var value = content_1[_i];
                                 var last5 = value.qUrl.substr(value.qUrl.length - 5);

@@ -168,10 +168,6 @@ export = {
                 app.getLibraryContent(item.qName)
                 .then((content: any) => {
 
-                    // xlsx xls
-                    
-
-
                     for (const value of content) {
 
                         let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
