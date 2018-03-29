@@ -156,14 +156,19 @@
                         var items = [];
                         app.getLibraryContent(item.qName)
                             .then(function (content) {
+                            // xlsx xls
                             for (var _i = 0, content_1 = content; _i < content_1.length; _i++) {
                                 var value = content_1[_i];
-                                var lib = value.qUrl.split("/")[2];
-                                var name_1 = value.qUrl.split("/")[3];
-                                items.push({
-                                    value: "content://" + (inApp === true ? "" : lib) + "/" + name_1,
-                                    label: name_1
-                                });
+                                var last5 = value.qUrl.substr(value.qUrl.length - 5);
+                                var last4 = value.qUrl.substr(value.qUrl.length - 4);
+                                if (last4 === ".xls" || last5 === ".xlsx") {
+                                    var lib = value.qUrl.split("/")[2];
+                                    var name_1 = value.qUrl.split("/")[3];
+                                    items.push({
+                                        value: "content://" + (inApp === true ? "" : lib) + "/" + name_1,
+                                        label: name_1
+                                    });
+                                }
                             }
                         })
                             .catch(function (error) {

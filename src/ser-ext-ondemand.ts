@@ -168,14 +168,23 @@ export = {
                 app.getLibraryContent(item.qName)
                 .then((content: any) => {
 
+                    // xlsx xls
+                    
+
 
                     for (const value of content) {
-                        let lib = (value.qUrl as string).split("/")[2];
-                        let name = (value.qUrl as string).split("/")[3];
-                        items.push({
-                            value: `content://${inApp===true?"":lib}/${name}`,
-                            label: name
-                        });
+
+                        let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
+                        let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
+
+                        if (last4 === ".xls" || last5 === ".xlsx") {
+                            let lib = (value.qUrl as string).split("/")[2];
+                            let name = (value.qUrl as string).split("/")[3];
+                            items.push({
+                                value: `content://${inApp===true?"":lib}/${name}`,
+                                label: name
+                            });
+                        }
                     }
 
                 })
