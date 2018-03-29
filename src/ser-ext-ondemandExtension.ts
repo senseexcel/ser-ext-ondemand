@@ -12,7 +12,7 @@ qvangular.service<services.IRegistrationProvider>("$registrationProvider", servi
 //#endregion
 
 //#region Logger
-logging.LogConfig.SetLogLevel("*", logging.LogLevel.info);
+logging.LogConfig.SetLogLevel("*", logging.LogLevel.debug);
 let logger = new logging.Logger("Main");
 //#endregion
 
@@ -22,17 +22,7 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", BookmarkDirectiveFac
     "OndemandExtension");
 //#endregion
 
-function test(params) {
-    return new Promise((resolve, reject) => {
-        setTimeout(() => {
-            resolve({ value: "a", label: "AA"})
-        }, 10)
-    })
-    // return { value: "a", label: "AA"};
-}
-
 function getListOfLib(app: EngineAPI.IApp): any {
-    console.log("getListOfLib")
     app.getContentLibraries()
     .then((res) => {
         let list: Array<EngineAPI.IContentLibraryListItem> = res as any;

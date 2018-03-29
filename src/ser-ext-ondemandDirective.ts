@@ -4,21 +4,75 @@ import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./main.css";
 //#endregion
 
+enum SERState {
+    load,
+    finished,
+    error
+}
+
+interface ISERResponseCreate {
+    TaskId: string;
+}
+
+interface ISERResponseStatus {
+    Status: number;
+    Log: string;
+    Link: string;
+}
+
+interface ISERRequestStatus {
+    TaskId: string;
+}
+
 class OnDemandController implements ng.IController {
 
-    taskId: string;
     status: string = "Generate Report";
     link: string;
-    state: string = "load";
+    editMode: boolean;
     element: JQuery;
     timeout: ng.ITimeoutService;
     reportError = false;
     refreshIntervalId: number;
+    refreshIntervalTime: number;
     properties = {
         template: " ",
         useSelection: " ",
         output: " "
     };
+
+
+    //#region logger
+    private _logger: logging.Logger;
+    private get logger(): logging.Logger {
+        if (!this._logger) {
+            try {
+                this._logger = new logging.Logger("OnDemandController");
+            } catch (error) {
+                console.error("ERROR in create logger instance", error);
+            }
+        }
+        return this._logger;
+    }
+    //#endregion
+
+    //#region state
+    private _state : SERState;
+    public get state() : SERState {
+        if (typeof(this._state)!=="undefined") {
+            return this._state;
+        }
+        return SERState.load;
+    }
+    public set state(v : SERState) {
+        if (v !== this._state) {
+            this._state = v;
+            if (v === SERState.error) {
+                clearInterval(this.refreshIntervalId);
+                this.status = "Error, confirm Logs";
+            }
+        }
+    }
+    //#endregion
 
     //#region model
     private _model: EngineAPI.IGenericObject;
@@ -30,26 +84,26 @@ class OnDemandController implements ng.IController {
             try {
                 this._model = value;
                 var that = this;
-                (value as any).on("changed", function () {
+                value.on("changed", function () {
                     value.getProperties()
                         .then((res) => {
-                        that.setProperties(res.properties);
-                    })
+                            that.setProperties(res.properties);
+                        })
                         .catch( (error) => {
-                        console.error("ERROR in setter of model ", error);
+                            this.logger.error("ERROR in setter of model ", error);
                     });
                 });
-                (value as any).emit("changed");
+                value.emit("changed");
             }
-            catch (e) {
-                console.error("error", e);
+            catch (error) {
+                this.logger.error("ERROR in setter of model", error);
             }
         }
     }
     //#endregion
 
     $onInit(): void {
-        // this.logger.debug("initialisation from BookmarkController");
+        this.logger.debug("initialisation from BookmarkController");
     }
 
     static $inject = ["$timeout", "$element", "$scope"];
@@ -58,156 +112,146 @@ class OnDemandController implements ng.IController {
      * init of the controller for the Directive
      * @param timeout
      * @param element
+     * @param scope
      */
     constructor(timeout: ng.ITimeoutService, element: JQuery, scope: ng.IScope) {
         this.status = "Generate Report";
-            this.state = "load";
-            this.properties = {
-                template: " ",
-                useSelection: " ",
-                output: " "
-            };
-            this.element = element;
-            this.timeout = timeout;
+        this.properties = {
+            template: " ",
+            useSelection: " ",
+            output: " "
+        };
+        this.element = element;
+        this.timeout = timeout;
+        this.refreshIntervalTime = 1000;
     }
 
-    getStatus () {
-        let reqestJson = {
-            "taskId": this.taskId
-        }
-        console.log("### call fcn getStatus ###"),
-        console.log("callFcn", "SER.Status('" + JSON.stringify(reqestJson) + "')");
-        this.model.app.evaluate("SER.Status('" + this.taskId + "')")
-            .then((status) => {
-            console.log("status", status);
-            let statusObject;
-                try {
-                    statusObject = JSON.parse(status);
-                } catch (error) {
-                    console.error("error", error);
-                }
-            switch (statusObject.Status) {
-                case -1:
-                    console.log("Error log from SER: ", statusObject.Log)
-                    clearInterval(this.refreshIntervalId);
-                    this.status = "Error, confirm Logs";
-                    this.state = "finished";
-                    this.reportError = true;
-                    break;
-                case 1:
-                    this.status = "Running ... (click to abort)";
-                    this.state = "load";
-                    break;
-                case 2:
-                    this.status = "Start uploading ...(click to abort)";
-                    this.state = "load";
-                    break;
-                case 3:
-                    this.status = "Uploading finished ...(click to abort)";
-                    this.state = "load";
-                    break;
-                case 5:
-                    clearInterval(this.refreshIntervalId);
-                    this.status = "Download Report";
-                    this.state = "finished";
-                    break;
-                default:
-                    clearInterval(this.refreshIntervalId);
-                    this.status = "Error, confirm Logs";
-                    this.state = "finished";
-                    this.reportError = true;
-                    break;
-            }
-        })
-            .catch((error) => {
-            console.error("ERROR", error);
-        });
-    };
-
-    downloadReport () {
-        let reqestJson = {
-            "taskId": this.taskId
-        }
-        this.model.app.evaluate("SER.Status('" + JSON.stringify(reqestJson) + "')")
-            .then((status) => {
-                let statusObject;
-                try {
-                    statusObject = JSON.parse(status);
-                } catch (error) {
-                    console.error("error", error);
-                }
-            console.log("link", statusObject.Link);
-            window.open("" + statusObject.Link);
-            this.state = "load";
-            this.status = "Generate Report";
-        })
-            .catch((error) => {
-            console.error("error", error);
-        });
-    };
-
-    createReport () {
+    private createReport () {
         let reqestJson = {
             "template": this.properties.template,
             "output": this.properties.output,
             "templauserSelectionte": this.properties.useSelection
         }
-        console.log("### call fcn createReport ###"),
-        console.log("callFcn", "SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')");
-        this.model.app.evaluate("SER.Create('" + this.properties.template + "','" + this.properties.output + "','" + this.properties.useSelection + "')")
-            .then((status) => {
-                console.log("status", status);
-                let statusObject;
+        let serCall: string = `SER.Create('${this.properties.template}','${this.properties.output}','${this.properties.useSelection}')`;
+        this.logger.debug("call fcn createRepor", serCall);
+
+        this.model.app.evaluate(serCall)
+            .then((response) => {
+
+                let statusObject: ISERResponseCreate;
                 try {
-                    statusObject = JSON.parse(status);
+                    statusObject = JSON.parse(response);
                 } catch (error) {
-                    console.error("error", error);
+                    this.logger.error("error", error);
                 }
-            console.log("### taskId:", statusObject.TaskId);
-            if(statusObject.TaskId === "-1") {
-                this.status = "Wrong Task ID";
-                this.reportError = true;
-                return;
-            }
-            this.taskId = statusObject.TaskId;
-            this.status = "Running ...";
-            this.refreshIntervalId = setInterval(() => {
-                this.getStatus();
-            }, 1000);
-        })
+                
+
+                if(typeof(statusObject) === "undefined" || statusObject.TaskId === "-1") {
+                    this.status = "Wrong Task ID - Retry";
+                    this.reportError = true;
+                    return;
+                }
+
+                this.logger.debug("### taskId:", statusObject.TaskId);
+
+                this.status = "Running ...  (click to abort)";
+                this.refreshIntervalId = setInterval(() => {
+                    this.getStatus(statusObject.TaskId);
+                }, this.refreshIntervalTime);
+            })
             .catch((error) => {
-            console.error("ERROR", error);
+                this.logger.error("ERROR", error);
         });
     };
 
-    setProperties (properties) {
-        console.log("setProperties", properties);
-            return new Promise((resolve, reject) => {
+    private setProperties (properties): Promise<void> {
+        this.logger.debug("setProperties", properties);
+        return new Promise((resolve, reject) => {
+            try {
                 this.properties.template = properties.template;
                 this.properties.useSelection = properties.useSelection;
                 this.properties.output = properties.output;
-            });
+                resolve();
+            } catch (error) {
+                reject(error);
+            }
+        });
     };
-    
+
+    private getStatus (taskId: string) {
+        let reqestJson: ISERRequestStatus = {
+            TaskId: taskId
+        }
+        let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
+
+        this.logger.debug("call fcn getStatus", serCall);
+        this.model.app.evaluate(serCall)
+            .then((response) => {
+                this.logger.debug("response from status call", response);
+                let statusObject: ISERResponseStatus = JSON.parse(response);
+
+                switch (statusObject.Status) {
+                    case -1:
+                        this.logger.error("Error log from SER: ", statusObject.Log)
+                        this.state = SERState.error;
+                        this.reportError = true;
+                        break;
+                    case 1:
+                        this.status = "Running ... (click to abort)";
+                        this.state = SERState.load;
+                        break;
+                    case 2:
+                        this.status = "Start uploading ...(click to abort)";
+                        this.state = SERState.load;
+                        break;
+                    case 3:
+                        this.status = "Uploading finished ...(click to abort)";
+                        this.state = SERState.load;
+                        break;
+                    case 5:
+                        clearInterval(this.refreshIntervalId);
+                        this.status = "Download Report";
+                        this.link = statusObject.Link;
+                        this.state = SERState.finished;
+                        break;
+                    default:
+                        this.state = SERState.error;
+                        this.reportError = true;
+                        break;
+                }
+            })
+        .catch((error) => {
+            this.state = SERState.error;
+            this.logger.error("ERROR", error);
+        });
+    };
+
+    /**
+     * controller function for click actions
+     */
     action () {
+        this.reportError = false;
+        this.state = SERState.load;
+        this.status = "Running ... (click to abort)"
         switch (this.state) {
-            case "load":
+            case SERState.load:
                 this.createReport();
-                break;
-            case "finished":
-                this.downloadReport();
                 break;
             default:
                 break;
         }
     };
 
-    restart() {
-        this.reportError = false;
-        this.state = "load";
-        this.status = "Running ..."
-        this.action();
+    /**
+     * isEditMode
+     */
+    public isEditMode(): boolean {
+        if (this.editMode) {
+            return true;
+        }
+        return false;
     }
+
 }
 
 export function BookmarkDirectiveFactory(rootNameSpace: string): ng.IDirectiveFactory {
@@ -227,13 +271,9 @@ export function BookmarkDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             },
             compile: ():void => {
                 utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
-                    directives.ListViewDirectiveFactory(rootNameSpace), "Listview");
-                utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
                     directives.IdentifierDirectiveFactory(rootNameSpace), "Identifier");
                 utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
                     directives.ShortCutDirectiveFactory(rootNameSpace), "Shortcut");
-                utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
-                    directives.ExtensionHeaderDirectiveFactory(rootNameSpace), "ExtensionHeader");
             }
         };
     };
