@@ -5,8 +5,9 @@ import "css!./main.css";
 //#endregion
 
 enum SERState {
-    load,
+    loading,
     finished,
+    ready,
     error
 }
 
@@ -31,6 +32,7 @@ class OnDemandController implements ng.IController {
     editMode: boolean;
     element: JQuery;
     timeout: ng.ITimeoutService;
+    taskId: string;
     reportError = false;
     refreshIntervalId: number;
     refreshIntervalTime: number;
@@ -61,14 +63,16 @@ class OnDemandController implements ng.IController {
         if (typeof(this._state)!=="undefined") {
             return this._state;
         }
-        return SERState.load;
+        return SERState.ready;
     }
     public set state(v : SERState) {
         if (v !== this._state) {
             this._state = v;
             if (v === SERState.error) {
+                this.reportError = true;
                 clearInterval(this.refreshIntervalId);
-                this.status = "Error, confirm Logs";
+                this.status = "Error while running - Retry";
+                this.state = SERState.ready;
             }
         }
     }
@@ -152,6 +156,8 @@ class OnDemandController implements ng.IController {
                     return;
                 }
 
+                this.taskId = statusObject.TaskId;
+
                 this.logger.debug("### taskId:", statusObject.TaskId);
 
                 this.status = "Running ...  (click to abort)";
@@ -194,19 +200,18 @@ class OnDemandController implements ng.IController {
                     case -1:
                         this.logger.error("Error log from SER: ", statusObject.Log)
                         this.state = SERState.error;
-                        this.reportError = true;
                         break;
                     case 1:
                         this.status = "Running ... (click to abort)";
-                        this.state = SERState.load;
+                        this.state = SERState.loading;
                         break;
                     case 2:
                         this.status = "Start uploading ...(click to abort)";
-                        this.state = SERState.load;
+                        this.state = SERState.loading;
                         break;
                     case 3:
                         this.status = "Uploading finished ...(click to abort)";
-                        this.state = SERState.load;
+                        this.state = SERState.loading;
                         break;
                     case 5:
                         clearInterval(this.refreshIntervalId);
@@ -216,7 +221,6 @@ class OnDemandController implements ng.IController {
                         break;
                     default:
                         this.state = SERState.error;
-                        this.reportError = true;
                         break;
                 }
             })
@@ -226,16 +230,39 @@ class OnDemandController implements ng.IController {
         });
     };
 
+    private abortReport() {
+        let reqestJson: ISERRequestStatus = {
+            TaskId: this.taskId
+        }
+        let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
+
+        this.logger.debug("call fcn getStatus", serCall);
+        this.model.app.evaluate(serCall)
+            .then(() => {
+                this.logger.debug("report generation aborted");
+            })
+        .catch((error) => {
+            this.logger.error("ERROR in abortRepot", error);
+            this.state = SERState.error;
+        });
+    }
+
     /**
      * controller function for click actions
      */
     action () {
         this.reportError = false;
-        this.state = SERState.load;
         this.status = "Running ... (click to abort)"
         switch (this.state) {
-            case SERState.load:
+            case SERState.ready:
                 this.createReport();
+                break;
+            case SERState.loading:
+                this.abortReport();
+                break;
+            case SERState.finished:
+                this.status = "Generate Report"
+                this.state = SERState.ready;
                 break;
             default:
                 break;
