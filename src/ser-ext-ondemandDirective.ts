@@ -74,6 +74,8 @@ class OnDemandController implements ng.IController {
                 this.status = "Error while running - Retry";
                 this.state = SERState.ready;
             }
+            if (v === SERState.finished)
+                clearInterval(this.refreshIntervalId);
         }
     }
     //#endregion
@@ -214,7 +216,6 @@ class OnDemandController implements ng.IController {
                         this.state = SERState.loading;
                         break;
                     case 5:
-                        clearInterval(this.refreshIntervalId);
                         this.status = "Download Report";
                         this.link = statusObject.Link;
                         this.state = SERState.finished;
@@ -261,6 +262,7 @@ class OnDemandController implements ng.IController {
                 this.abortReport();
                 break;
             case SERState.finished:
+                this.link = null;
                 this.status = "Generate Report"
                 this.state = SERState.ready;
                 break;
