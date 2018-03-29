@@ -134,12 +134,12 @@ class OnDemandController implements ng.IController {
 
     private createReport () {
         let reqestJson = {
-            "template": this.properties.template,
-            "output": this.properties.output,
-            "templauserSelectionte": this.properties.useSelection
+            template: this.properties.template,
+            output: this.properties.output,
+            selectionMode: this.properties.useSelection
         }
-        let serCall: string = `SER.Create('${this.properties.template}','${this.properties.output}','${this.properties.useSelection}')`;
-        this.logger.debug("call fcn createRepor", serCall);
+        let serCall: string = `SER.Create('${JSON.stringify(reqestJson)}')`;
+        this.logger.debug("call fcn createRepor",serCall);
 
         this.model.app.evaluate(serCall)
             .then((response) => {
@@ -188,7 +188,7 @@ class OnDemandController implements ng.IController {
 
     private getStatus (taskId: string) {
         let reqestJson: ISERRequestStatus = {
-            TaskId: taskId
+            "TaskId": `${taskId}`
         }
         let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
 
@@ -233,7 +233,7 @@ class OnDemandController implements ng.IController {
 
     private abortReport() {
         let reqestJson: ISERRequestStatus = {
-            TaskId: this.taskId
+            "TaskId": `${this.taskId}`
         }
         let serCall: string = `SER.Abort('${JSON.stringify(reqestJson)}')`;
 
