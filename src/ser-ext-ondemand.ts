@@ -108,6 +108,20 @@ let parameter = {
                                 label: "Not Use"
                             }],
                             defaultValue: true
+                        },
+                        sharedSession: {
+                            ref: "properties.sharedSession",
+                            label: "share session with reporting engine",
+                            type: "boolean",
+                            component: "switch",
+                            options: [{
+                                value: true,
+                                label: "Share"
+                            }, {
+                                value: false,
+                                label: "Not Share"
+                            }],
+                            defaultValue: false
                         }
                     }
                 }

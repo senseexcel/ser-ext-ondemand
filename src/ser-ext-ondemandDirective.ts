@@ -33,7 +33,8 @@ class OnDemandController implements ng.IController {
     properties = {
         template: " ",
         useSelection: " ",
-        output: " "
+        output: " ",
+        sharedSession: false
     };
     reportError = false;
     refreshIntervalId: number;
@@ -42,6 +43,8 @@ class OnDemandController implements ng.IController {
     status: string = "Generate Report";
     taskId: string;
     timeout: ng.ITimeoutService;
+    bookmarkId: string;
+    host: string;
 
     //#region logger
     private _logger: logging.Logger;
@@ -128,26 +131,80 @@ class OnDemandController implements ng.IController {
         this.properties = {
             template: " ",
             useSelection: " ",
-            output: " "
+            output: " ",
+            sharedSession: false
         };
         this.element = element;
         this.timeout = timeout;
         this.refreshIntervalTime = 2000;
+        this.bookmarkId = "serBookmarkOnDemand";
+        
+        let hostArr: Array<string> = ((this.model as any).session.config.url as string).split("/")
+        
+        this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
+        this.logger.info("host", hostArr);
+        this.logger.info("host", this.host);
+    }
+
+    private createBookmark (id: string): Promise<string> {
+        return new Promise((resolve, reject) => {
+            let bookmarkProperties: EngineAPI.IGenericBookmarkProperties =  {
+                qInfo: {
+                    qType: "ser-bookmark",
+                    qId: id
+                },
+                qMetaDef: {
+                    title: "onDemand"
+                },
+                creationDate: (new Date()).toISOString()
+            }
+
+            this.model.app.createBookmark(bookmarkProperties)
+                .then((bookmarkObject) => {
+                    resolve(this.bookmarkId);
+                })
+            .catch((error) => {
+                this.logger.error("ERROR in create Bookmark", error);
+                reject(error);
+            });
+        })
+    }
+
+    private checkAndDeleteExistingBookmark(id: string): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.model.app.destroyBookmark(id)
+                .then((checker) => {
+                    this.logger.debug("Result destroy bookmark", checker);
+                    resolve();
+                })
+            .catch((error) => {
+                this.logger.error("ERROR in checkAndDeleteExistingBookmark", error);
+                reject(error);
+            })
+        });
     }
 
     private createReport () {
         this.running = true;
-        let reqestJson = {
-            template: this.properties.template,
-            output: this.properties.output,
-            selectionMode: this.properties.useSelection
-        }
-        let serCall: string = `SER.Create('${JSON.stringify(reqestJson)}')`;
-        this.logger.debug("call fcn createRepor", serCall);
 
-        this.model.app.evaluate(serCall)
+        this.checkAndDeleteExistingBookmark(this.bookmarkId)
+            .then(() => {
+                return this.createBookmark(this.bookmarkId);
+            })
+            .then(() => {
+                let reqestJson = {
+                    template: this.properties.template,
+                    output: this.properties.output,
+                    selectionMode: this.properties.useSelection,
+                    sharedMode: this.properties.sharedSession,
+                    bookmarkId: this.bookmarkId
+                }
+                let serCall: string = `SER.Create('${JSON.stringify(reqestJson)}')`;
+                this.logger.debug("call fcn createRepor", serCall);
+
+                return this.model.app.evaluate(serCall);
+            })
             .then((response) => {
-
                 let statusObject: ISERResponseCreate;
                 try {
                     statusObject = JSON.parse(response);
@@ -171,9 +228,10 @@ class OnDemandController implements ng.IController {
                     this.getStatus(statusObject.TaskId);
                 }, this.refreshIntervalTime);
             })
-            .catch((error) => {
-                this.logger.error("ERROR", error);
-        });
+        .catch((error) => {
+            this.logger.error("ERROR in createReport", error);
+        })
+
     };
 
     private setProperties (properties): Promise<void> {
@@ -232,7 +290,7 @@ class OnDemandController implements ng.IController {
                         break;
                     case 5:
                         this.status = "Download Report";
-                        this.link = statusObject.Link;
+                        this.link = `${this.host}${statusObject.Link}`;
                         this.state = SERState.finished;
                         break;
                     default:
@@ -276,7 +334,7 @@ class OnDemandController implements ng.IController {
             case SERState.loading:
                 this.abortReport();
                 break;
-            case SERState.finished:                
+            case SERState.finished:
                 this.status = "Generate Report"
                 this.state = SERState.ready;
                 setTimeout(() => {
