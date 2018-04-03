@@ -10,6 +10,7 @@ node_modules/
 dist/
 
 ## Include
+!src/gulpfile.js
 
 ## Standard vccode
 .vscode/*
