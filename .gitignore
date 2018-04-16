@@ -8,6 +8,7 @@ package-lock.json
 ## Typescript q2g Folders
 node_modules/
 dist/
+_temp/
 
 ## Include
 !src/gulpfile.js

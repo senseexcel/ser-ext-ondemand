@@ -32,7 +32,7 @@ function getListOfLib(app: EngineAPI.IApp): any {
             returnVal.push({
                 value: item.qName,
                 label: item.qName
-            })
+            });
         }
 
         return returnVal;
@@ -40,7 +40,7 @@ function getListOfLib(app: EngineAPI.IApp): any {
     })
     .catch((error) => {
         console.error("ERROR", error);
-    })
+    });
 }
 
 let scope2 : any;
@@ -71,7 +71,7 @@ let parameter = {
                             ref: "properties.template",
                             label: "choose Content",
                             component: "dropdown",
-                            options: function(a)
+                            options: function(a: any)
                             {
                                 return scope2.dataCon[a.properties.templateContentLibrary];
                             },
@@ -95,33 +95,21 @@ let parameter = {
                             }],
                             defaultValue: "pdf"
                         },
-                        useSelection: {
-                            ref: "properties.useSelection",
-                            label: "use current selection",
-                            type: "boolean",
-                            component: "switch",
+                        selection: {
+                            ref: "properties.selection",
+                            label: "choose selection mode",
+                            component: "dropdown",
                             options: [{
-                                value: true,
-                                label: "Use"
+                                value: 0,
+                                label: "Selection over shared session"
                             }, {
-                                value: false,
-                                label: "Not Use"
-                            }],
-                            defaultValue: true
-                        },
-                        sharedSession: {
-                            ref: "properties.sharedSession",
-                            label: "share session with reporting engine",
-                            type: "boolean",
-                            component: "switch",
-                            options: [{
-                                value: true,
-                                label: "Share"
+                                value: 1,
+                                label: "Selection over bookmark"
                             }, {
-                                value: false,
-                                label: "Not Share"
-                            }],
-                            defaultValue: false
+                                value: 2,
+                                label: "not Use"
+                            }, ],
+                            defaultValue: 0
                         }
                     }
                 }
@@ -174,7 +162,7 @@ export = {
                 returnVal.push({
                     value: index,
                     label: item.qAppSpecific===true?"in App":item.qName
-                })
+                });
                 index++;
 
                 let items = [];
@@ -210,8 +198,6 @@ export = {
         .catch((error) => {
             console.error("ERROR", error);
         });
-
-       
     }]
 };
 
