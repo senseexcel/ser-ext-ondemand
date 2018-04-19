@@ -4,12 +4,14 @@ import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./ser-ext-ondemandDirective.css";
 //#endregion
 
+//#region enums
 enum SERState {
     loading,
     finished,
     ready,
     error
 }
+//#endregion
 
 //#region interfaces
 interface ISERResponseStart {
@@ -23,7 +25,7 @@ interface ISERResponseStatus {
 }
 
 interface ISERRequestStatus {
-    TaskId: string;
+    TaskId?: string;
 }
 
 interface ISERRequestStart {
@@ -97,6 +99,12 @@ class OnDemandController implements ng.IController {
     timeout: ng.ITimeoutService;
     bookmarkId: string;
     host: string;
+    intervalShort: number = 3000;
+    intervalLong: number = 5000;
+
+    // taskRunning: boolean = false;
+
+    interval: number;
     //#endregion
 
     //#region logger
@@ -123,17 +131,18 @@ class OnDemandController implements ng.IController {
     }
     public set state(v : SERState) {
         if (v !== this._state) {
+            console.log("STATE", v);
             this._state = v;
             if (v === SERState.error) {
                 this.running = false;
                 this.reportError = true;
-                clearInterval(this.refreshIntervalId);
+                clearInterval(this.interval);
                 this.status = "Error while running - Retry";
                 this.state = SERState.ready;
             }
             if (v === SERState.finished) {
                 this.running = false;
-                clearInterval(this.refreshIntervalId);
+                clearInterval(this.interval);
             }
         }
     }
@@ -188,25 +197,107 @@ class OnDemandController implements ng.IController {
      */
     constructor(timeout: ng.ITimeoutService, element: JQuery, scope: ng.IScope) {
         this.status = "Generate Report";
-        this.properties = {
-            template: " ",
-            output: " ",
-            selection: 0
-        };
         this.element = element;
         this.timeout = timeout;
         this.refreshIntervalTime = 2000;
         this.bookmarkId = "serBookmarkOnDemand";
 
         let hostArr: Array<string> = ((this.model as any).session.config.url as string).split("/");
-
         this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
+
         this.logger.info("host", hostArr);
         this.logger.info("host", this.host);
+
+        this.setInterval(this.intervalLong);
     }
 
     //#region private function
-    private createReport () {
+    private setInterval(intervalTime: number): void {
+        this.interval = setInterval(() => {
+            this.logger.debug("intervall");
+            this.getStatus(this.taskId);
+        }, intervalTime);
+    }
+
+    private createRequest(): ISERRequestStart {
+        let general: ISERGeneral = {
+            useUserSelections: "OnDemandOn"
+        };
+        let connection: ISERConnection;
+        let template: ISERTemplate = {
+            input: this.properties.template,
+            output: "OnDemand",
+            outputFormat: this.properties.output
+        };
+
+        switch (this.properties.selection) {
+            case 0:
+                connection = {
+                    app: this.appId,
+                    sharedSession: true
+                };
+                general.useUserSelections = "OnDemandOn";
+                break;
+
+            case 1:
+                connection = {
+                    app: this.appId,
+                    sharedSession: false
+                };
+                general.useUserSelections = "OnDemandOff";
+                template = {
+                    input: this.properties.template,
+                    output: "OnDemand",
+                    outputFormat: this.properties.output,
+                    selections: [{
+                        type: "static",
+                        objectType: "bookmark",
+                        values: this.bookmarkId
+                    }]
+                };
+                break;
+
+            case 2:
+                general.useUserSelections = "Normal";
+                connection = {
+                    sharedSession: false
+                };
+                break;
+            default:
+                break;
+        }
+
+        return {
+            tasks: [{
+                general: general,
+                connection: connection,
+                template: template,
+                distribute: {
+                    hub: {
+                        connection: "@CONFIGCONNECTION@",
+                        mode: "Override"
+                    }
+                }
+            }]
+        };
+    }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+    private start (): void {
         this.running = true;
 
         this.checkAndDeleteExistingBookmark(this.bookmarkId)
@@ -214,70 +305,8 @@ class OnDemandController implements ng.IController {
                 return this.createBookmark(this.bookmarkId);
             })
             .then(() => {
-
-
-                let general: ISERGeneral = {
-                    useUserSelections: "OnDemandOn"
-                };
-                let connection: ISERConnection;
-                let template: ISERTemplate = {
-                    input: this.properties.template,
-                    output: "OnDemand",
-                    outputFormat: this.properties.output
-                };
-
-                switch (this.properties.selection) {
-                    case 0:
-                        connection = {
-                            app: this.appId,
-                            sharedSession: true
-                        };
-                        general.useUserSelections = "OnDemandOn";
-                        break;
-
-                    case 1:
-                        connection = {
-                            app: this.appId,
-                            sharedSession: false
-                        };
-                        general.useUserSelections = "OnDemandOff";
-                        template = {
-                            input: this.properties.template,
-                            output: "OnDemand",
-                            outputFormat: this.properties.output,
-                            selections: [{
-                                type: "static",
-                                objectType: "bookmark",
-                                values: this.bookmarkId
-                            }]
-                        };
-                        break;
-
-                    case 2:
-                        general.useUserSelections = "Normal";
-                        connection = {
-                            sharedSession: false
-                        };
-                        break;
-                    default:
-                        break;
-                }
-
-                const reqestJson: ISERRequestStart = {
-                    tasks: [{
-                        general: general,
-                        connection: connection,
-                        template: template,
-                        distribute: {
-                            hub: {
-                                connection: "@CONFIGCONNECTION@",
-                                mode: "Override"
-                            }
-                        }
-                    }]
-                };
-
-                let serCall: string = `SER.Start('${JSON.stringify(reqestJson)}')`;
+                let requestJson: ISERRequestStart = this.createRequest();
+                let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
                 this.logger.debug("call fcn createRepor", serCall);
 
                 return this.model.app.evaluate(serCall);
@@ -289,21 +318,18 @@ class OnDemandController implements ng.IController {
                 } catch (error) {
                     this.logger.error("error", error);
                 }
+                this.logger.debug("taskId:", statusObject.TaskId);
 
                 if(typeof(statusObject) === "undefined" || statusObject.TaskId === "-1") {
                     this.status = "Wrong Task ID - Retry";
                     this.reportError = true;
                     return;
                 }
-
                 this.taskId = statusObject.TaskId;
-
-                this.logger.debug("### taskId:", statusObject.TaskId);
-
                 this.status = "Running ...  (click to abort)";
-                this.refreshIntervalId = setInterval(() => {
-                    this.getStatus(statusObject.TaskId);
-                }, this.refreshIntervalTime);
+
+                clearInterval(this.interval);
+                this.setInterval(this.intervalShort);
             })
         .catch((error) => {
             this.logger.error("ERROR in createReport", error);
@@ -363,29 +389,47 @@ class OnDemandController implements ng.IController {
     }
 
     private getStatus (taskId: string) {
-        let reqestJson: ISERRequestStatus = {
-            "TaskId": `${taskId}`
-        };
+        let reqestJson: ISERRequestStatus = {};
+        if (typeof(taskId)!=="undefined") {
+            reqestJson = {
+                "TaskId": `${taskId}`
+            };
+        }
 
         let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
 
         this.logger.debug("call fcn getStatus", serCall);
         this.model.app.evaluate(serCall)
             .then((response) => {
+                let statusObject: ISERResponseStatus;
                 this.logger.debug("response from status call", response);
 
-                let statusObject: ISERResponseStatus;
+
+                try {
+                    if (response.indexOf("Error in expression")!==-1) {
+                        this.logger.error(response);
+                        return;
+                    }
+                } catch (error) {
+                    this.logger.error("ERROR", error);
+                    return;
+                }
+
                 try {
                     statusObject = JSON.parse(response);
                 } catch (error) {
-                    this.logger.error("Error log from SER: ", statusObject.Log);
+                    this.logger.error("Error log from SER: ", response);
                     this.state = SERState.error;
                 }
 
+                console.log("STATUSOBJECT", statusObject.Status);
+                console.log("RUNNING", this.running);
                 switch (statusObject.Status) {
                     case -1:
-                        this.logger.error("Error log from SER: ", statusObject.Log);
-                        this.state = SERState.error;
+                        if (this.running) {
+                            this.state = SERState.error;
+                        }
+                        this.state = SERState.ready;
                         break;
                     case 1:
                         this.status = "Running ... (click to abort)";
@@ -448,7 +492,7 @@ class OnDemandController implements ng.IController {
         this.status = "Running ... (click to abort)";
         switch (this.state) {
             case SERState.ready:
-                this.createReport();
+                this.start();
                 break;
             case SERState.loading:
                 this.abortReport();
