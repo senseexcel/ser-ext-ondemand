@@ -8,11 +8,12 @@
      <div style="position:absolute">
         <button ng-click="vm.action()"
                 class="lui-button  lui-button--rounded  lui-button--info"
+                ng-class="{'inactive': vm.state === 0 && !vm.clicked}"
                 q2g-shortcut
                 shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
                 shortcut-action="vm.action()">
-            <a ng-href="{{vm.link}}" target="_blank">{{vm.status}}</a>
-            <div class="spinner" ng-if="vm.running">
+            <a ng-href="{{vm.link}}" target="_blank">{{vm.title}}</a>
+            <div class="spinner" ng-if="vm.state === 0">
                 <div class="bounce1"></div>
                 <div class="bounce2"></div>
                 <div class="bounce3"></div>

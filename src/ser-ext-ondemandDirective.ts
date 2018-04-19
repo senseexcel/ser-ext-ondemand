@@ -22,6 +22,7 @@ interface ISERResponseStatus {
     Status: number;
     Log: string;
     Link: string;
+    TaskId: string;
 }
 
 interface ISERRequestStatus {
@@ -99,6 +100,7 @@ class OnDemandController implements ng.IController {
     intervalLong: number = 5000;
     timeoutAfterStop: number = 2000;
     interval: number;
+    clicked: boolean = false;
     //#endregion
 
     //#region logger
@@ -127,13 +129,18 @@ class OnDemandController implements ng.IController {
         if (v !== this._state) {
             this._state = v;
 
+            this.logger.debug("STATE: ", v);
+
             switch (v) {
                 case SERState.ready:
+                    setTimeout(() => {
+                        this.link = null;
+                    }, 1000);
                     this.title  = "Generate Report";
                     break;
 
                 case SERState.running:
-                    this.title  = "Generating ...";
+                    this.title  = "Running ...";
                     break;
 
                 case SERState.finished:
@@ -218,7 +225,7 @@ class OnDemandController implements ng.IController {
         let general: ISERGeneral = {
             useUserSelections: "OnDemandOn"
         };
-        let connection: ISERConnection;
+       let connection: ISERConnection;
         let template: ISERTemplate = {
             input: this.properties.template,
             output: "OnDemand",
@@ -399,6 +406,10 @@ class OnDemandController implements ng.IController {
                     this.state = SERState.error;
                 }
 
+                if(typeof(statusObject.TaskId)!=="undefined") {
+                    this.taskId = statusObject.TaskId;
+                }
+
                 switch (statusObject.Status) {
                     case -1:
                         this.state = SERState.error;
@@ -407,13 +418,14 @@ class OnDemandController implements ng.IController {
                     case 0:
                         this.state = SERState.ready;
                         break;
-                    case 1:
+                   case 1:
                         this.state = SERState.running;
                         break;
                     case 2:
                         this.state = SERState.running;
                         break;
                     case 3:
+                       this.link = `${this.host}${statusObject.Link}`
                         this.state = SERState.finished;
                         break;
                     default:
@@ -437,7 +449,7 @@ class OnDemandController implements ng.IController {
         this.logger.debug("call fcn abortReport", serCall);
         this.model.app.evaluate(serCall)
             .then(() => {
-               this.logger.debug("report generation aborted");
+              this.logger.debug("report generation aborted");
             })
         .catch((error) => {
             this.logger.error("ERROR in abortRepot", error);
@@ -452,28 +464,29 @@ class OnDemandController implements ng.IController {
      * controller function for click actions
      */
     action () {
-        // this.status = "Running ... (click to abort)";
-        console.log("#### STATE ####", SERState[this.state]);
         switch (this.state) {
             case SERState.ready:
+                this.clicked = true;
+                this.title = "Running ...";
                 this.start();
                 break;
             case SERState.running:
+                this.clicked = false;
                 this.stopReport();
                 break;
             case SERState.finished:
+                this.clicked = false;
                 this.title = "Generate Report";
                 this.state = SERState.ready;
-                setTimeout(() => {
-                    this.link = null;
-                    this.stopReport();
-                }, 1000);
+                this.stopReport();
                 break;
             default:
+                this.clicked = false;
                 this.stopReport();
                 setTimeout(() => {
                     this.start();
                 }, this.timeoutAfterStop);
+                break;
         }
     }
 
@@ -513,4 +526,5 @@ export function BookmarkDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
         };
     };
 }
+
 
