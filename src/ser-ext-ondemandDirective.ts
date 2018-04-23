@@ -9,7 +9,8 @@ enum SERState {
     running,
     finished,
     ready,
-    error
+    error,
+    serNotRunning
 }
 //#endregion
 
@@ -83,24 +84,25 @@ class OnDemandController implements ng.IController {
 
     //#region variables
     appId: string;
+    bookmarkId: string = "serBookmarkOnDemand";
+    clicked: boolean = false;
     editMode: boolean;
     element: JQuery;
+    host: string;
+    interval: number;
+    intervalShort: number = 3000;
+    intervalLong: number = 5000;
     link: string;
     properties: IProperties = {
         template: " ",
         output: " ",
         selection: 0
     };
+    running: boolean = false;
     title: string = "Generate Report";
     taskId: string;
     timeout: ng.ITimeoutService;
-    bookmarkId: string = "serBookmarkOnDemand";
-    host: string;
-    intervalShort: number = 3000;
-    intervalLong: number = 5000;
     timeoutAfterStop: number = 2000;
-    interval: number;
-    clicked: boolean = false;
     //#endregion
 
     //#region logger
@@ -133,6 +135,8 @@ class OnDemandController implements ng.IController {
 
             switch (v) {
                 case SERState.ready:
+                    this.running = false;
+                    this.clicked = false;
                     setTimeout(() => {
                         this.link = null;
                     }, 1000);
@@ -140,16 +144,27 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case SERState.running:
-                    this.title  = "Running ...";
+                    this.running = true;
+                    this.title  = "Running ... (click to abort)";
                     break;
 
                 case SERState.finished:
+                    this.running = false;
+                    this.clicked = false;
                     this.title  = "Download Report";
                     clearInterval(this.interval);
                     this.setInterval(this.intervalLong);
                     break;
 
+                case SERState.serNotRunning:
+                    this.running = false;
+                    this.clicked = false;
+                    this.title  = "SER not available";
+                    break;
+
                 default:
+                    this.running = false;
+                    this.clicked = false;
                     this.title = "Error while running - Retry";
                     break;
             }
@@ -211,6 +226,7 @@ class OnDemandController implements ng.IController {
         let hostArr: Array<string> = ((this.model as any).session.config.url as string).split("/");
         this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
 
+        this.getStatus(this.taskId);
         this.setInterval(this.intervalLong);
     }
 
@@ -391,7 +407,8 @@ class OnDemandController implements ng.IController {
 
                 try {
                     if (response.indexOf("Error in expression")!==-1) {
-                        this.logger.error(response);
+                        this.logger.warn(response);
+                        this.state = SERState.serNotRunning;
                         return;
                     }
                 } catch (error) {
@@ -425,7 +442,7 @@ class OnDemandController implements ng.IController {
                         this.state = SERState.running;
                         break;
                     case 3:
-                       this.link = `${this.host}${statusObject.Link}`
+                        this.link = `${this.host}${statusObject.Link}`;
                         this.state = SERState.finished;
                         break;
                     default:
@@ -434,7 +451,7 @@ class OnDemandController implements ng.IController {
                 }
             })
         .catch((error) => {
-            this.state = SERState.error;
+            this.state = SERState.serNotRunning;
             this.logger.error("ERROR", error);
         });
     }
@@ -464,25 +481,30 @@ class OnDemandController implements ng.IController {
      * controller function for click actions
      */
     action () {
+        if (this.state === 4) {
+            return;
+        }
         switch (this.state) {
             case SERState.ready:
                 this.clicked = true;
-                this.title = "Running ...";
+                this.running = true;
+                this.title = "Running ... (click to abort)";
                 this.start();
                 break;
             case SERState.running:
-                this.clicked = false;
+            this.title = "Aborting ... ";
                 this.stopReport();
                 break;
             case SERState.finished:
-                this.clicked = false;
                 this.title = "Generate Report";
                 this.state = SERState.ready;
+                window.open(this.link, "_blank");
                 this.stopReport();
                 break;
             default:
-                this.clicked = false;
+                this.clicked = true;
                 this.stopReport();
+                this.title = "Running ... (click to abort)";
                 setTimeout(() => {
                     this.start();
                 }, this.timeoutAfterStop);

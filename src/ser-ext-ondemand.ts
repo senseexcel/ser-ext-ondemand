@@ -12,7 +12,7 @@ qvangular.service<services.IRegistrationProvider>("$registrationProvider", servi
 //#endregion
 
 //#region Logger
-logging.LogConfig.SetLogLevel("*", logging.LogLevel.debug);
+logging.LogConfig.SetLogLevel("*", logging.LogLevel.warn);
 let logger = new logging.Logger("Main");
 //#endregion
 
