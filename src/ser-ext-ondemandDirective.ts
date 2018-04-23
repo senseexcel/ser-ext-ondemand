@@ -9,7 +9,8 @@ enum SERState {
     running,
     finished,
     ready,
-    error
+    error,
+    serNotRunning
 }
 //#endregion
 
@@ -83,8 +84,14 @@ class OnDemandController implements ng.IController {
 
     //#region variables
     appId: string;
+    bookmarkId: string = "serBookmarkOnDemand";
+    clicked: boolean = false;
     editMode: boolean;
     element: JQuery;
+    host: string;
+    interval: number;
+    intervalShort: number = 3000;
+    intervalLong: number = 5000;
     link: string;
     properties: IProperties = {
         template: " ",
@@ -94,13 +101,7 @@ class OnDemandController implements ng.IController {
     title: string = "Generate Report";
     taskId: string;
     timeout: ng.ITimeoutService;
-    bookmarkId: string = "serBookmarkOnDemand";
-    host: string;
-    intervalShort: number = 3000;
-    intervalLong: number = 5000;
     timeoutAfterStop: number = 2000;
-    interval: number;
-    clicked: boolean = false;
     //#endregion
 
     //#region logger
@@ -147,6 +148,10 @@ class OnDemandController implements ng.IController {
                     this.title  = "Download Report";
                     clearInterval(this.interval);
                     this.setInterval(this.intervalLong);
+                    break;
+
+                case SERState.serNotRunning:
+                    this.title  = "SER not available";
                     break;
 
                 default:
@@ -211,6 +216,7 @@ class OnDemandController implements ng.IController {
         let hostArr: Array<string> = ((this.model as any).session.config.url as string).split("/");
         this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
 
+        this.getStatus(this.taskId);
         this.setInterval(this.intervalLong);
     }
 
@@ -391,7 +397,8 @@ class OnDemandController implements ng.IController {
 
                 try {
                     if (response.indexOf("Error in expression")!==-1) {
-                        this.logger.error(response);
+                        this.logger.info(response);
+                        this.state = SERState.serNotRunning;
                         return;
                     }
                 } catch (error) {
@@ -425,7 +432,7 @@ class OnDemandController implements ng.IController {
                         this.state = SERState.running;
                         break;
                     case 3:
-                       this.link = `${this.host}${statusObject.Link}`
+                        this.link = `${this.host}${statusObject.Link}`;
                         this.state = SERState.finished;
                         break;
                     default:
@@ -435,7 +442,7 @@ class OnDemandController implements ng.IController {
             })
         .catch((error) => {
             this.state = SERState.error;
-            this.logger.error("ERROR", error);
+            this.logger.error("ERROR*****", error);
         });
     }
 
