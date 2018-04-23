@@ -481,6 +481,9 @@ class OnDemandController implements ng.IController {
      * controller function for click actions
      */
     action () {
+        if (this.state === 4) {
+            return;
+        }
         switch (this.state) {
             case SERState.ready:
                 this.clicked = true;
