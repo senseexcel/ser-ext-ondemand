@@ -498,6 +498,7 @@ class OnDemandController implements ng.IController {
             case SERState.finished:
                 this.title = "Generate Report";
                 this.state = SERState.ready;
+                window.open(this.link, "_blank");
                 this.stopReport();
                 break;
             default:
