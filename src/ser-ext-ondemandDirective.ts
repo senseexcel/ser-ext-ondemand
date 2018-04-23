@@ -98,6 +98,7 @@ class OnDemandController implements ng.IController {
         output: " ",
         selection: 0
     };
+    running: boolean = false;
     title: string = "Generate Report";
     taskId: string;
     timeout: ng.ITimeoutService;
@@ -134,6 +135,8 @@ class OnDemandController implements ng.IController {
 
             switch (v) {
                 case SERState.ready:
+                    this.running = false;
+                    this.clicked = false;
                     setTimeout(() => {
                         this.link = null;
                     }, 1000);
@@ -141,20 +144,27 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case SERState.running:
-                    this.title  = "Running ...";
+                    this.running = true;
+                    this.title  = "Running ... (click to abort)";
                     break;
 
                 case SERState.finished:
+                    this.running = false;
+                    this.clicked = false;
                     this.title  = "Download Report";
                     clearInterval(this.interval);
                     this.setInterval(this.intervalLong);
                     break;
 
                 case SERState.serNotRunning:
+                    this.running = false;
+                    this.clicked = false;
                     this.title  = "SER not available";
                     break;
 
                 default:
+                    this.running = false;
+                    this.clicked = false;
                     this.title = "Error while running - Retry";
                     break;
             }
@@ -397,7 +407,7 @@ class OnDemandController implements ng.IController {
 
                 try {
                     if (response.indexOf("Error in expression")!==-1) {
-                        this.logger.info(response);
+                        this.logger.warn(response);
                         this.state = SERState.serNotRunning;
                         return;
                     }
@@ -441,8 +451,8 @@ class OnDemandController implements ng.IController {
                 }
             })
         .catch((error) => {
-            this.state = SERState.error;
-            this.logger.error("ERROR*****", error);
+            this.state = SERState.serNotRunning;
+            this.logger.error("ERROR", error);
         });
     }
 
@@ -474,22 +484,23 @@ class OnDemandController implements ng.IController {
         switch (this.state) {
             case SERState.ready:
                 this.clicked = true;
-                this.title = "Running ...";
+                this.running = true;
+                this.title = "Running ... (click to abort)";
                 this.start();
                 break;
             case SERState.running:
-                this.clicked = false;
+            this.title = "Aborting ... ";
                 this.stopReport();
                 break;
             case SERState.finished:
-                this.clicked = false;
                 this.title = "Generate Report";
                 this.state = SERState.ready;
                 this.stopReport();
                 break;
             default:
-                this.clicked = false;
+                this.clicked = true;
                 this.stopReport();
+                this.title = "Running ... (click to abort)";
                 setTimeout(() => {
                     this.start();
                 }, this.timeoutAfterStop);
