@@ -110,7 +110,21 @@ let parameter = {
                                 label: "not Use"
                             }, ],
                             defaultValue: 0
-                        }
+                        },
+                        directDownload: {
+                            type: "boolean",
+                            component: "switch",
+                            label: "Direct Download",
+                            ref: "properties.directDownload",
+                            options: [{
+                                value: true,
+                                label: "On"
+                            }, {
+                                value: false,
+                                label: "Not On"
+                            }],
+                            defaultValue: false
+                            }
                     }
                 }
             }

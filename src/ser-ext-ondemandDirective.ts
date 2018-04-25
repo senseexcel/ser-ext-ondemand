@@ -77,6 +77,7 @@ interface IProperties {
     template: string;
     output: string;
     selection: number;
+    directDownload: boolean;
 }
 //#endregion
 
@@ -96,7 +97,8 @@ class OnDemandController implements ng.IController {
     properties: IProperties = {
         template: " ",
         output: " ",
-        selection: 0
+        selection: 0,
+        directDownload: false
     };
     running: boolean = false;
     title: string = "Generate Report";
@@ -149,9 +151,15 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case SERState.finished:
+
                     this.running = false;
                     this.clicked = false;
+
                     this.title  = "Download Report";
+                    if (this.properties.directDownload) {
+                        this.action();
+                    }
+
                     clearInterval(this.interval);
                     this.setInterval(this.intervalLong);
                     break;
@@ -382,6 +390,7 @@ class OnDemandController implements ng.IController {
                 this.properties.template = properties.template;
                 this.properties.selection = properties.selection;
                 this.properties.output = properties.output;
+                this.properties.directDownload = properties.directDownload;
                 resolve();
             } catch (error) {
                 reject(error);
