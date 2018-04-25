@@ -8,13 +8,13 @@
     //     "**/**.ts"
     // ],
     "compilerOptions": {
-      // "module": "umd",
+      "module": "umd",
       "noEmitOnError": true,
       "noImplicitAny": false,
       "removeComments": false,
       "sourceMap": true,
       "target": "es5",
-      "moduleResolution": "node",
+      // "moduleResolution": "node",
       "lib": [
         "dom",
         "es5",
