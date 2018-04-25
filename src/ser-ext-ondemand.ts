@@ -22,6 +22,18 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", BookmarkDirectiveFac
     "OndemandExtension");
 //#endregion
 
+//#region interfaces
+interface IDataLabel {
+    label: string;
+    value: string | number;
+}
+
+interface IPropertyContent {
+    dataLib: IDataLabel[];
+    dataCon: IDataLabel[];
+}
+//#endregion
+
 function getListOfLib(app: EngineAPI.IApp): any {
     app.getContentLibraries()
     .then((res) => {
@@ -31,12 +43,10 @@ function getListOfLib(app: EngineAPI.IApp): any {
         for (const item of list) {
             returnVal.push({
                 value: item.qName,
-                label: item.qName
+                label: decodeURI(item.qName)
             });
         }
-
         return returnVal;
-
     })
     .catch((error) => {
         console.error("ERROR", error);
@@ -110,7 +120,21 @@ let parameter = {
                                 label: "not Use"
                             }, ],
                             defaultValue: 0
-                        }
+                        },
+                        directDownload: {
+                            type: "boolean",
+                            component: "switch",
+                            label: "Direct Download",
+                            ref: "properties.directDownload",
+                            options: [{
+                                value: true,
+                                label: "On"
+                            }, {
+                                value: false,
+                                label: "Not On"
+                            }],
+                            defaultValue: false
+                            }
                     }
                 }
             }
@@ -119,18 +143,50 @@ let parameter = {
 };
 //#endregion
 
-class OnDemanExtension {
+
+class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
+    scope: any;
 
-    constructor(model: EngineAPI.IGenericObject) {
+    //#region mode
+    private _mode : boolean;
+    public get mode() : boolean {
+        return this._mode;
+    }
+    public set mode(v : boolean) {
+        if (this.mode !== v) {
+            this._mode = v;
+            try {
+
+                getPropertyContent(this.model.app)
+                .then((res) => {
+                    (this.scope as any).dataLib = res.dataLib;
+                    (this.scope as any).dataCon = res.dataCon;
+                })
+                .catch((error) => {
+                    console.error("ERROR", error);
+                });
+
+            } catch (error) {
+                console.error("E");
+            }
+        }
+
+    }
+    //#endregion
+
+    constructor(model: EngineAPI.IGenericObject, scope: any) {
         this.model = model;
+        this.scope = scope;
     }
 
     public isEditMode() {
         if (qlik.navigation.getMode() === "analysis") {
+            this.mode = false;
             return false;
         } else {
+            this.mode = true;
             return true;
         }
     }
@@ -141,15 +197,28 @@ export = {
     definition: parameter,
     initialProperties: { },
     template: template,
-    controller: ["$scope", function (scope: utils.IVMScope<OnDemanExtension>) {
+    controller: ["$scope", function (scope: utils.IVMScope<OnDemandExtension>) {
         scope2 = scope as any;
-        scope.vm = new OnDemanExtension(utils.getEnigma(scope));
+        scope.vm = new OnDemandExtension(utils.getEnigma(scope), scope);
 
         let app: EngineAPI.IApp = scope.vm.model.app;
 
-        app.getContentLibraries()
+        getPropertyContent(app)
         .then((res) => {
-            let list: Array<EngineAPI.IContentLibraryListItem> = res as any;
+            (scope as any).dataLib = res.dataLib;
+            (scope as any).dataCon = res.dataCon;
+        })
+        .catch((error) => {
+            console.error("ERROR", error);
+        });
+    }]
+};
+
+function getPropertyContent(app: EngineAPI.IApp): Promise<IPropertyContent> {
+    return new Promise((resolve, reject) => {
+        app.getContentLibraries()
+        .then((res: any) => {
+            let list: Array<EngineAPI.IContentLibraryListItem> = res;
             let returnVal = [];
             let returnValContent = [];
 
@@ -180,7 +249,7 @@ export = {
                             let name = (value.qUrl as string).split("/")[3];
                             items.push({
                                 value: `content://${inApp===true?"":lib}/${name}`,
-                                label: name
+                                label: decodeURI(name)
                             });
                         }
                     }
@@ -192,13 +261,15 @@ export = {
 
                 returnValContent.push(items);
             }
-            (scope as any).dataLib = returnVal;
-            (scope as any).dataCon = returnValContent;
+
+
+            resolve({
+                dataLib: returnVal,
+                dataCon: returnValContent
+            });
         })
         .catch((error) => {
-            console.error("ERROR", error);
+            reject(error);
         });
-    }]
-};
-
-
+    });
+}
