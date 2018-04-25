@@ -4,11 +4,7 @@
       ".vscode",
       "node_modules"
     ],
-    // "include": [
-    //     "**/**.ts"
-    // ],
     "compilerOptions": {
-      // "module": "umd",
       "noEmitOnError": true,
       "noImplicitAny": false,
       "removeComments": false,
