@@ -144,7 +144,7 @@ let parameter = {
 //#endregion
 
 
-class OnDemanExtension {
+class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
     scope: any;
@@ -197,9 +197,9 @@ export = {
     definition: parameter,
     initialProperties: { },
     template: template,
-    controller: ["$scope", function (scope: utils.IVMScope<OnDemanExtension>) {
+    controller: ["$scope", function (scope: utils.IVMScope<OnDemandExtension>) {
         scope2 = scope as any;
-        scope.vm = new OnDemanExtension(utils.getEnigma(scope), scope);
+        scope.vm = new OnDemandExtension(utils.getEnigma(scope), scope);
 
         let app: EngineAPI.IApp = scope.vm.model.app;
 
