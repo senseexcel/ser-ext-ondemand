@@ -70,7 +70,7 @@ let parameter = {
                     items: {
                         templateContentLibrary: {
                             ref: "properties.templateContentLibrary",
-                            label: "choose Library",
+                            label: "Library",
                             component: "dropdown",
                             options: function()
                             {
@@ -79,7 +79,7 @@ let parameter = {
                         },
                         templateContent: {
                             ref: "properties.template",
-                            label: "choose Content",
+                            label: "Content",
                             component: "dropdown",
                             options: function(a: any)
                             {
@@ -94,7 +94,7 @@ let parameter = {
                         },
                         output: {
                             ref: "properties.output",
-                            label: "which output format",
+                            label: "Output Format",
                             component: "dropdown",
                             options: [{
                                 value: "pdf",
@@ -107,7 +107,7 @@ let parameter = {
                         },
                         selection: {
                             ref: "properties.selection",
-                            label: "choose selection mode",
+                            label: "Selection Mode",
                             component: "dropdown",
                             options: [{
                                 value: 0,
