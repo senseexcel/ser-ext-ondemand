@@ -13,7 +13,6 @@ _temp/
 ## Include
 !src/gulpfile.js
 !src/webpack.config.js
-!src/placeholder/ser-ext-ondemand.js
 
 ## Standard vccode
 .vscode/*
