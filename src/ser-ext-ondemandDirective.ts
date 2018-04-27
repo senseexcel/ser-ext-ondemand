@@ -277,7 +277,7 @@ class OnDemandController implements ng.IController {
                     outputFormat: this.properties.output,
                     selections: [{
                         type: "static",
-                        objectType: "bookmark",
+                        objectType: "ser-bookmark",
                         values: this.bookmarkId
                     }]
                 };
@@ -353,13 +353,16 @@ class OnDemandController implements ng.IController {
                     qId: id
                 },
                 qMetaDef: {
-                    title: "onDemand"
+                    title: id
                 },
                 creationDate: (new Date()).toISOString()
             };
 
             this.model.app.createBookmark(bookmarkProperties)
                 .then((bookmarkObject) => {
+                    return this.model.app.doSave();
+                })
+                .then(() => {
                     resolve(this.bookmarkId);
                 })
             .catch((error) => {
