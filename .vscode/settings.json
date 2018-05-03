@@ -6,6 +6,7 @@
         },
          "src/lib/daVinci.js":false,
         "**/*.map": true,
-        "**/*.css": true
+        "**/*.css": true,
+        "**/*-lock.json": true
     }
 }
