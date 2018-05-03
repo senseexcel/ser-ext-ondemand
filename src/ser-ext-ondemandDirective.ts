@@ -10,7 +10,8 @@ enum SERState {
     finished,
     ready,
     error,
-    serNotRunning
+    serNotRunning,
+    serNoConnectionQlik
 }
 //#endregion
 
@@ -169,6 +170,11 @@ class OnDemandController implements ng.IController {
                     this.clicked = false;
                     this.title  = "SER not available";
                     break;
+
+                case SERState.serNoConnectionQlik:
+                    this.running = false;
+                    this.clicked = false;
+                    this.title = "SER no connection to Qlik";
 
                 default:
                     this.running = false;
@@ -440,9 +446,11 @@ class OnDemandController implements ng.IController {
                 }
 
                 switch (statusObject.Status) {
+                    case -2:
+                        this.state = SERState.serNoConnectionQlik;
+                        break;
                     case -1:
                         this.state = SERState.error;
-                        this.logger.error("ERROR FROM SER: ", response);
                         break;
                     case 0:
                         this.state = SERState.ready;
@@ -457,6 +465,7 @@ class OnDemandController implements ng.IController {
                         this.link = `${this.host}${statusObject.Link}`;
                         this.state = SERState.finished;
                         break;
+
                     default:
                         this.state = SERState.error;
                         break;
@@ -492,7 +501,7 @@ class OnDemandController implements ng.IController {
     /**
      * controller function for click actions
      */
-    action () {
+    public action () {
         if (this.state === 4) {
             return;
         }
@@ -534,6 +543,7 @@ class OnDemandController implements ng.IController {
         return false;
     }
     //#endregion
+
 }
 
 export function BookmarkDirectiveFactory(rootNameSpace: string): ng.IDirectiveFactory {
