@@ -2,10 +2,9 @@ language: node_js
 sudo: false
 node_js:
   - 6
-  - 5
 install:
-  - cd src
+  - cd test
   - npm install --dev
 script:
-- cd src
+- cd test
 - npm test

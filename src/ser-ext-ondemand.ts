@@ -3,7 +3,7 @@ import * as qvangular from "qvangular";
 import * as qlik from "qlik";
 import * as template from "text!./ser-ext-ondemand.html";
 import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
-import { BookmarkDirectiveFactory } from "./ser-ext-ondemandDirective";
+import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 //#endregion
 
 //#region registrate services
@@ -12,13 +12,13 @@ qvangular.service<services.IRegistrationProvider>("$registrationProvider", servi
 //#endregion
 
 //#region Logger
-logging.LogConfig.SetLogLevel("*", logging.LogLevel.warn);
+logging.LogConfig.SetLogLevel("*", logging.LogLevel.debug);
 let logger = new logging.Logger("Main");
 //#endregion
 
 //#region Directives
 var $injector = qvangular.$injector;
-utils.checkDirectiveIsRegistrated($injector, qvangular, "", BookmarkDirectiveFactory("Ondemandextension"),
+utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFactory("Ondemandextension"),
     "OndemandExtension");
 //#endregion
 

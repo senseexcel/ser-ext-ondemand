@@ -2,6 +2,7 @@
 import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./ser-ext-ondemandDirective.css";
+// import * as guid from "node-uuid";
 //#endregion
 
 //#region enums
@@ -91,7 +92,7 @@ class OnDemandController implements ng.IController {
     editMode: boolean;
     element: JQuery;
     host: string;
-    interval: number;
+    interval: NodeJS.Timer;
     intervalShort: number = 3000;
     intervalLong: number = 5000;
     link: string;
@@ -225,6 +226,14 @@ class OnDemandController implements ng.IController {
         this.logger.debug("initialisation from BookmarkController");
     }
 
+    $onDestroy(): void {
+        try {
+            clearInterval(this.interval);
+        } catch {
+            this.logger.debug("could not clear interval onDestroy");
+        }
+    }
+
     static $inject = ["$timeout", "$element", "$scope"];
 
     /**
@@ -316,18 +325,34 @@ class OnDemandController implements ng.IController {
     }
 
     private start (): void {
+        this.logger.debug("this.properties.selection", this.properties.selection);
+        if (this.properties.selection === 0) {
+            this.runSerStartCommand()
+            .catch((error) => {
+                this.logger.error("ERROR in createReport", error);
+            });
+        } else {
+            this.checkAndDeleteExistingBookmark(this.bookmarkId)
+                .then(() => {
+                    return this.createBookmark(this.bookmarkId);
+                })
+                .then(() => {
+                    return this.runSerStartCommand();
+                })
+            .catch((error) => {
+                this.logger.error("ERROR in createReport", error);
+            });
+        }
+    }
 
-        this.checkAndDeleteExistingBookmark(this.bookmarkId)
-            .then(() => {
-                return this.createBookmark(this.bookmarkId);
-            })
-            .then(() => {
-                let requestJson: ISERRequestStart = this.createRequest();
-                let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
-                this.logger.debug("call fcn createRepor", serCall);
+    private runSerStartCommand(): Promise<void> {
+        return new Promise((resolve, reject) => {
 
-                return this.model.app.evaluate(serCall);
-            })
+            let requestJson: ISERRequestStart = this.createRequest();
+            let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
+            this.logger.debug("call fcn createRepor", serCall);
+
+            this.model.app.evaluate(serCall)
             .then((response) => {
                let statusObject: ISERResponseStart;
                 try {
@@ -345,9 +370,11 @@ class OnDemandController implements ng.IController {
 
                 clearInterval(this.interval);
                 this.setInterval(this.intervalShort);
+                resolve();
             })
-        .catch((error) => {
-            this.logger.error("ERROR in createReport", error);
+            .catch((error) => {
+                reject(error);
+            });
         });
     }
 
@@ -366,7 +393,8 @@ class OnDemandController implements ng.IController {
 
             this.model.app.createBookmark(bookmarkProperties)
                 .then((bookmarkObject) => {
-                    return this.model.app.doSave();
+                    (bookmarkProperties as any).qMetaDef.description="changeDescriptionToSaveBookmark";
+                    return bookmarkObject.setProperties(bookmarkProperties);
                 })
                 .then(() => {
                     resolve(this.bookmarkId);
@@ -546,7 +574,7 @@ class OnDemandController implements ng.IController {
 
 }
 
-export function BookmarkDirectiveFactory(rootNameSpace: string): ng.IDirectiveFactory {
+export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFactory {
     "use strict";
     return ($document: ng.IAugmentedJQuery, $injector: ng.auto.IInjectorService, $registrationProvider: any) => {
         return {
