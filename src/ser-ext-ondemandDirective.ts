@@ -2,7 +2,6 @@
 import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./ser-ext-ondemandDirective.css";
-// import * as guid from "node-uuid";
 //#endregion
 
 //#region enums
@@ -18,6 +17,7 @@ enum SERState {
 
 //#region interfaces
 interface ISERResponseStart {
+    Status: number;
     TaskId: string;
 }
 
@@ -33,15 +33,19 @@ interface ISERRequestStatus {
 }
 
 interface ISERRequestStart {
+    onDemand: boolean;
     tasks: ISERTask[];
 }
 
-interface ISERTask {
+interface ISERReport {
     general: ISERGeneral;
-    connection: ISERConnection;
+    connections: ISERConnection[];
     template: ISERTemplate;
     distribute: ISERDistribute;
+}
 
+interface ISERTask {
+    reports: ISERReport[];
 }
 
 interface ISERGeneral {
@@ -66,7 +70,7 @@ interface ISERDistribute {
 
 interface ISERHub {
     mode: string;
-    connection: string;
+    connections: string;
 }
 
 interface ISERSelection {
@@ -86,15 +90,17 @@ interface IProperties {
 class OnDemandController implements ng.IController {
 
     //#region variables
+    invalid: boolean = false;
     appId: string;
-    bookmarkId: string = "serBookmarkOnDemand";
+    appPublished: boolean;
+    bookmarkName: string = "serBookmarkOnDemand";
     clicked: boolean = false;
     editMode: boolean;
     element: JQuery;
     host: string;
     interval: NodeJS.Timer;
     intervalShort: number = 3000;
-    intervalLong: number = 5000;
+    intervalLong: number = 6000;
     link: string;
     properties: IProperties = {
         template: " ",
@@ -102,7 +108,9 @@ class OnDemandController implements ng.IController {
         selection: 0,
         directDownload: false
     };
+    username: string;
     running: boolean = false;
+    sheetId: string;
     title: string = "Generate Report";
     taskId: string;
     timeout: ng.ITimeoutService;
@@ -162,7 +170,7 @@ class OnDemandController implements ng.IController {
                         this.action();
                     }
 
-                    clearInterval(this.interval);
+                    this.clearInterval();
                     this.setInterval(this.intervalLong);
                     break;
 
@@ -176,6 +184,7 @@ class OnDemandController implements ng.IController {
                     this.running = false;
                     this.clicked = false;
                     this.title = "SER no connection to Qlik";
+                    break;
 
                 default:
                     this.running = false;
@@ -228,7 +237,7 @@ class OnDemandController implements ng.IController {
 
     $onDestroy(): void {
         try {
-            clearInterval(this.interval);
+            this.clearInterval();
         } catch {
             this.logger.debug("could not clear interval onDestroy");
         }
@@ -243,28 +252,129 @@ class OnDemandController implements ng.IController {
      * @param scope
      */
     constructor(timeout: ng.ITimeoutService, element: JQuery, scope: ng.IScope) {
+
         this.element = element;
         this.timeout = timeout;
 
-        let hostArr: Array<string> = ((this.model as any).session.config.url as string).split("/");
+        let hostArr: Array<string> = ((this.model as any).session.rpc.url as string).split("/");
         this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
+
+        let arrProm: Promise<void>[] = [];
+        arrProm.push(this.getUsername());
+        arrProm.push(this.getIsPublished());
+
+        this.getSheetId()
+        .catch((error) => {
+            this.logger.info("no sheet found");
+            throw error;
+        });
+
+        Promise.all(arrProm)
+        .then(() => {
+            this.invalid = true;
+            this.logger.info(this.username);
+        })
+        .catch((error) => {
+            this.logger.error("error in constructor", error);
+        });
+
 
         this.getStatus(this.taskId);
         this.setInterval(this.intervalLong);
     }
 
     //#region private function
+    private getUsername(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.model.app.evaluateEx("=OSUser()")
+            .then((res) => {
+                let uArr = res.qText.split(";");
+                this.username = `${uArr[0].split("=")[1]}/${uArr[1].split("=")[1]}`;
+                this.bookmarkName = `serBookmarkOnDemand-${this.username}`;
+                resolve();
+            })
+            .catch((error) => {
+                this.logger.error("error while getting user", error);
+                this.bookmarkName = "serBookmarkOnDemand";
+                reject();
+            });
+        });
+    }
+
+    private getSheetId(): Promise<void> {
+        return new Promise((resolve, reject) => {
+
+            this.model.app.getAllInfos()
+            .then((allInfo) => {
+                let sheets: EngineAPI.INxInfo[] = [];
+                for (const info of allInfo) {
+                    if (info.qType === "sheet") {
+                        sheets.push(info);
+                    }
+                }
+                for (const sheet of sheets) {
+                    let sheetObject: EngineAPI.IGenericObject;
+                    this.model.app.getObject(sheet.qId)
+                    .then((res) => {
+                        sheetObject = res;
+                        return res.getFullPropertyTree();
+                    })
+                    .then((res) => {
+                        for (const iterator of res.qChildren) {
+                            if (iterator.qProperty.qInfo.qId === this.model.id) {
+                                this.sheetId = sheetObject.id;
+                            }
+                        }
+                        resolve();
+                    })
+                    .catch((error) => {
+                        Promise.reject(error);
+                    });
+                }
+            })
+            .catch((error) => {
+                this.logger.error("error in get sheet id", error);
+                this.sheetId = "default";
+                reject();
+            });
+        });
+    }
+
+    private getIsPublished(): Promise<void> {
+        return new Promise((resolve, reject) => {
+            this.model.app.getAppProperties()
+            .then((appProperties) => {
+                this.appPublished = false;
+                if(typeof((appProperties as any).published) !=="undefined") {
+                    this.appPublished = (appProperties as any).published;
+                }
+                resolve();
+            })
+            .catch((error) => {
+                this.logger.error("error in if sheet is published", error);
+                reject();
+            });
+        });
+    }
+
     private setInterval(intervalTime: number): void {
+        this.logger.debug("fcn: setInterfal");
         this.interval = setInterval(() => {
             this.getStatus(this.taskId);
         }, intervalTime);
     }
 
-    private createRequest(): ISERRequestStart {
+    private clearInterval(): void {
+        this.logger.debug("fcn: clearInterval");
+        clearInterval(this.interval);
+    }
+
+    private createRequest(bookmarkId: string): ISERRequestStart {
+        this.logger.debug("fcn: createRequest");
         let general: ISERGeneral = {
             useUserSelections: "OnDemandOn"
         };
-       let connection: ISERConnection;
+        let connection: ISERConnection;
         let template: ISERTemplate = {
             input: this.properties.template,
             output: "OnDemand",
@@ -292,83 +402,90 @@ class OnDemandController implements ng.IController {
                     outputFormat: this.properties.output,
                     selections: [{
                         type: "static",
-                        objectType: "ser-bookmark",
-                        values: this.bookmarkId
+                        objectType: "hiddenbookmark",
+                        values: bookmarkId
                     }]
                 };
                 break;
 
-            case 2:
+            default:
                 general.useUserSelections = "Normal";
                 connection = {
                     app: this.appId,
                     sharedSession: false
                 };
                 break;
-            default:
-                break;
         }
 
         return {
+            onDemand: true,
             tasks: [{
-                general: general,
-                connection: connection,
-                template: template,
-                distribute: {
-                    hub: {
-                        connection: "@CONFIGCONNECTION@",
-                        mode: "Override"
+                reports: [{
+                    general: general,
+                    connections: [connection],
+                    template: template,
+                    distribute: {
+                        hub: {
+                            connections: "@CONFIGCONNECTION@",
+                            mode: "Override"
+                        }
                     }
-                }
+                }]
             }]
         };
     }
 
     private start (): void {
-        this.logger.debug("this.properties.selection", this.properties.selection);
-        if (this.properties.selection === 0) {
-            this.runSerStartCommand()
+        this.logger.debug("fcn: start");
+        if (this.properties.selection !== 1) {
+            this.runSerStartCommand("")
             .catch((error) => {
                 this.logger.error("ERROR in createReport", error);
             });
         } else {
-            this.checkAndDeleteExistingBookmark(this.bookmarkId)
-                .then(() => {
-                    return this.createBookmark(this.bookmarkId);
-                })
-                .then(() => {
-                    return this.runSerStartCommand();
-                })
+            this.createBookmark()
+            .then((bookmarkId) => {
+                return this.runSerStartCommand(bookmarkId);
+            })
             .catch((error) => {
                 this.logger.error("ERROR in createReport", error);
             });
         }
     }
 
-    private runSerStartCommand(): Promise<void> {
+    private runSerStartCommand(bookmarkId: string): Promise<void> {
+        this.logger.debug("fcn: runSerStrartCommand");
         return new Promise((resolve, reject) => {
 
-            let requestJson: ISERRequestStart = this.createRequest();
+            let requestJson: ISERRequestStart = this.createRequest(bookmarkId);
             let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
-            this.logger.debug("call fcn createRepor", serCall);
+            this.logger.debug("Json for SER.start command: ", serCall);
 
             this.model.app.evaluate(serCall)
             .then((response) => {
                let statusObject: ISERResponseStart;
+               this.logger.debug("Response from SER.Start: ", response);
                 try {
                     statusObject = JSON.parse(response);
                 } catch (error) {
                     this.logger.error("error", error);
                 }
                 this.logger.debug("taskId:", statusObject.TaskId);
+                this.logger.debug("Status:", statusObject.Status);
 
                 if(typeof(statusObject) === "undefined" || statusObject.TaskId === "-1") {
+                    this.logger.debug("in defined error block from SER.Start");
                     this.title = "Wrong Task ID - Retry";
                     return;
                 }
+
+                if (statusObject.Status === -1) {
+                    this.state = SERState.serNoConnectionQlik;
+                }
+
                 this.taskId = statusObject.TaskId;
 
-                clearInterval(this.interval);
+                this.clearInterval();
                 this.setInterval(this.intervalShort);
                 resolve();
             })
@@ -378,27 +495,60 @@ class OnDemandController implements ng.IController {
         });
     }
 
-    private createBookmark (id: string): Promise<string> {
+    private createBookmark (): Promise<string> {
+        this.logger.debug("fcn: createBookmark");
         return new Promise((resolve, reject) => {
+
+            let bookmarkId: string = "";
+
             let bookmarkProperties: EngineAPI.IGenericBookmarkProperties =  {
                 qInfo: {
-                    qType: "ser-bookmark",
-                    qId: id
+                    qType: "hiddenbookmark"
                 },
                 qMetaDef: {
-                    title: id
+                    title: this.bookmarkName
                 },
+                sheetId: this.sheetId,
                 creationDate: (new Date()).toISOString()
             };
 
-            this.model.app.createBookmark(bookmarkProperties)
-                .then((bookmarkObject) => {
-                    (bookmarkProperties as any).qMetaDef.description="changeDescriptionToSaveBookmark";
-                    return bookmarkObject.setProperties(bookmarkProperties);
-                })
-                .then(() => {
-                    resolve(this.bookmarkId);
-                })
+            this.model.app.getBookmarks({
+                qTypes: ["hiddenbookmark"],
+                qData: {}
+            })
+            .then((bookmarks) => {
+                let proms: Promise<void>[] = [];
+                for (const bookmark of (bookmarks as any)) {
+                    try {
+                        if (bookmark.qMeta.title === this.bookmarkName) {
+                            proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
+                        }
+                    } catch {
+                        // if the bookmark is not correct, just do nothing
+                    }
+                }
+                return Promise.all(proms);
+            })
+            .then(() => {
+                this.logger.debug("bookmark properties", bookmarkProperties);
+                return this.model.app.createBookmark(bookmarkProperties);
+            })
+            .then((bookmarkObject) => {
+                bookmarkId = (bookmarkObject as any).id;
+
+                switch (this.appPublished) {
+                    case true:
+                        this.logger.debug("app is published");
+                        return bookmarkObject.publish();
+
+                    default:
+                        this.logger.debug("app is in my work");
+                        return this.model.app.doSave();
+                }
+            })
+            .then(() => {
+                resolve(bookmarkId);
+            })
             .catch((error) => {
                 this.logger.error("ERROR in create Bookmark", error);
                 reject(error);
@@ -406,22 +556,37 @@ class OnDemandController implements ng.IController {
         });
     }
 
-    private checkAndDeleteExistingBookmark(id: string): Promise<void> {
+    private destroyExistingBookmark(id: string): Promise<void> {
+        this.logger.debug("fcn: destroyExistingBookmark", id);
         return new Promise((resolve, reject) => {
-            this.model.app.destroyBookmark(id)
-                .then((checker) => {
-                    this.logger.debug("Result destroy bookmark", checker);
-                    resolve();
-                })
+            let obj;
+            this.model.app.getBookmark(id)
+            .then((object) => {
+                obj = object;
+                return object.getLayout();
+            })
+            .then((info) => {
+                if((info.qMeta as any).published) {
+                    this.logger.debug("bookmark info", info);
+                    return obj.unPublish();
+                }
+            })
+            .then(() => {
+                return this.model.app.destroyBookmark(id);
+            })
+            .then((res) => {
+                this.logger.info("Status from delete", res);
+                resolve();
+            })
             .catch((error) => {
-                this.logger.error("ERROR in checkAndDeleteExistingBookmark", error);
+                this.logger.error("ERROR in destroyExistingBookmark", error);
                 reject(error);
             });
         });
     }
 
     private setProperties (properties: IProperties): Promise<void> {
-        this.logger.debug("setProperties", properties);
+        this.logger.debug("fcn: setProperties");
         return new Promise((resolve, reject) => {
             try {
                 this.properties.template = properties.template;
@@ -436,6 +601,7 @@ class OnDemandController implements ng.IController {
     }
 
     private getStatus (taskId: string) {
+        this.logger.debug("fcn: getStatus");
         let reqestJson: ISERRequestStatus = {};
         if (typeof(taskId)!=="undefined") {
             reqestJson = {
@@ -473,6 +639,8 @@ class OnDemandController implements ng.IController {
                     this.taskId = statusObject.TaskId;
                 }
 
+                this.logger.debug("statusObject.Status", statusObject.Status);
+
                 switch (statusObject.Status) {
                     case -2:
                         this.state = SERState.serNoConnectionQlik;
@@ -482,6 +650,7 @@ class OnDemandController implements ng.IController {
                         break;
                     case 0:
                         this.state = SERState.ready;
+                        this.logger.info("SER Status is ready");
                         break;
                    case 1:
                         this.state = SERState.running;
@@ -506,6 +675,7 @@ class OnDemandController implements ng.IController {
     }
 
     private stopReport() {
+        this.logger.debug("fcn: stopReport");
         let reqestJson: ISERRequestStatus = {
            "TaskId": `${this.taskId}`
         };
@@ -530,6 +700,7 @@ class OnDemandController implements ng.IController {
      * controller function for click actions
      */
     public action () {
+        this.logger.debug("fcn: action");
         if (this.state === 4) {
             return;
         }
@@ -550,6 +721,7 @@ class OnDemandController implements ng.IController {
                 window.open(this.link, "_blank");
                 this.stopReport();
                 break;
+
             default:
                 this.clicked = true;
                 this.stopReport();
@@ -565,6 +737,7 @@ class OnDemandController implements ng.IController {
      * isEditMode
      */
     public isEditMode(): boolean {
+        this.logger.trace("fcn: isEditMode");
         if (this.editMode) {
             return true;
         }
@@ -598,5 +771,3 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
         };
     };
 }
-
-

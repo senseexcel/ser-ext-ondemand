@@ -143,7 +143,6 @@ let parameter = {
 };
 //#endregion
 
-
 class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
@@ -169,7 +168,7 @@ class OnDemandExtension {
                 });
 
             } catch (error) {
-                console.error("E");
+                console.error("ERROR", error);
             }
         }
 

@@ -6,6 +6,7 @@ const ZipPlugin = require('zip-webpack-plugin');
 const PKG = require('./package.json');
 const packagenName = PKG.name;
 const deployPath = 'dist';
+const WebPackDeployAfterBuild = require('webpack-deploy-after-build');
 
 function CssLoaderReplacerPlugin(options) {
 }
@@ -110,6 +111,10 @@ let config = {
         new ZipPlugin({
             path: './',
             filename: `${packagenName}.zip`,
+        }),
+        new WebPackDeployAfterBuild({
+            from: path.resolve(__dirname, './dist'),
+            to: 'C:/QlikShare/StaticContent/Extensions/ser-ext-ondemand/'
         })
     ]
 }
