@@ -13,7 +13,6 @@ enum SERState {
     serNotRunning,
     serNoConnectionQlik
 }
-//#endregion
 
 enum EVersionOption {
     all
@@ -22,6 +21,7 @@ enum EVersionOption {
 enum ETaskOption {
     all
 }
+//#endregion
 
 //#region interfaces
 interface ISERResponseStart {
