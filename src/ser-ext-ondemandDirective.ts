@@ -15,21 +15,37 @@ enum SERState {
 }
 //#endregion
 
+enum EVersionOption {
+    all
+}
+
+enum ETaskOption {
+    all
+}
+
 //#region interfaces
 interface ISERResponseStart {
-    Status: number;
-    TaskId: string;
+    status: number;
+    taskId: string;
+}
+
+interface ISERResponseStatusVersion {
+    name: string;
+    version: string;
 }
 
 interface ISERResponseStatus {
-    Status: number;
-    Log: string;
-    Link: string;
-    TaskId: string;
+    status: number;
+    log: string;
+    link: string;
+    taskId: string;
+    versions: ISERResponseStatusVersion[];
 }
 
 interface ISERRequestStatus {
-    TaskId?: string;
+    taskId?: string;
+    versions?: EVersionOption | string;
+    tasks?: ETaskOption | string;
 }
 
 interface ISERRequestStart {
@@ -470,20 +486,20 @@ class OnDemandController implements ng.IController {
                 } catch (error) {
                     this.logger.error("error", error);
                 }
-                this.logger.debug("taskId:", statusObject.TaskId);
-                this.logger.debug("Status:", statusObject.Status);
+                this.logger.debug("taskId:", statusObject.taskId);
+                this.logger.debug("Status:", statusObject.status);
 
-                if(typeof(statusObject) === "undefined" || statusObject.TaskId === "-1") {
+                if(typeof(statusObject) === "undefined" || statusObject.taskId === "-1") {
                     this.logger.debug("in defined error block from SER.Start");
                     this.title = "Wrong Task ID - Retry";
                     return;
                 }
 
-                if (statusObject.Status === -1) {
+                if (statusObject.status === -1) {
                     this.state = SERState.serNoConnectionQlik;
                 }
 
-                this.taskId = statusObject.TaskId;
+                this.taskId = statusObject.taskId;
 
                 this.clearInterval();
                 this.setInterval(this.intervalShort);
@@ -605,7 +621,11 @@ class OnDemandController implements ng.IController {
         let reqestJson: ISERRequestStatus = {};
         if (typeof(taskId)!=="undefined") {
             reqestJson = {
-                "TaskId": `${taskId}`
+                "taskId": `${taskId}`
+            };
+        } else {
+            reqestJson = {
+                "versions": EVersionOption[EVersionOption.all]
             };
         }
 
@@ -635,13 +655,13 @@ class OnDemandController implements ng.IController {
                     this.state = SERState.error;
                 }
 
-                if(typeof(statusObject.TaskId)!=="undefined") {
-                    this.taskId = statusObject.TaskId;
+                if(typeof(statusObject.taskId)!=="undefined") {
+                    this.taskId = statusObject.taskId;
                 }
 
-                this.logger.debug("statusObject.Status", statusObject.Status);
+                this.logger.debug("statusObject.Status", statusObject.status);
 
-                switch (statusObject.Status) {
+                switch (statusObject.status) {
                     case -2:
                         this.state = SERState.serNoConnectionQlik;
                         break;
@@ -659,7 +679,7 @@ class OnDemandController implements ng.IController {
                         this.state = SERState.running;
                         break;
                     case 3:
-                        this.link = `${this.host}${statusObject.Link}`;
+                        this.link = `${this.host}${statusObject.link}`;
                         this.state = SERState.finished;
                         break;
 
@@ -677,7 +697,7 @@ class OnDemandController implements ng.IController {
     private stopReport() {
         this.logger.debug("fcn: stopReport");
         let reqestJson: ISERRequestStatus = {
-           "TaskId": `${this.taskId}`
+           "taskId": `${this.taskId}`
         };
 
         let serCall: string = `SER.Stop('${JSON.stringify(reqestJson)}')`;
