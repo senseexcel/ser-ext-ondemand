@@ -11,11 +11,6 @@ qvangular.service<services.IRegistrationProvider>("$registrationProvider", servi
 .implementObject(qvangular);
 //#endregion
 
-//#region Logger
-logging.LogConfig.SetLogLevel("*", logging.LogLevel.warn);
-let logger = new logging.Logger("Main");
-//#endregion
-
 //#region Directives
 var $injector = qvangular.$injector;
 utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFactory("Ondemandextension"),
@@ -134,7 +129,35 @@ let parameter = {
                                 label: "Not On"
                             }],
                             defaultValue: false
-                            }
+                        },
+                        loglevel: {
+                            ref: "properties.loglevel",
+                            label: "loglevel",
+                            component: "dropdown",
+                            options: [{
+                                value: 0,
+                                label: "trace"
+                            }, {
+                                value: 1,
+                                label: "debug"
+                            }, {
+                                value: 2,
+                                label: "info"
+                            }, {
+                                value: 3,
+                                label: "warn"
+                            }, {
+                                value: 4,
+                                label: "error"
+                            }, {
+                                value: 5,
+                                label: "fatal"
+                            }, {
+                                value: 6,
+                                label: "off"
+                            }],
+                            defaultValue: 3
+                        },
                     }
                 }
             }
@@ -196,7 +219,19 @@ export = {
     definition: parameter,
     initialProperties: { },
     template: template,
+    paint: () => {
+        //
+    },
+    resize: () => {
+        //
+    },
     controller: ["$scope", function (scope: utils.IVMScope<OnDemandExtension>) {
+
+        //#region Logger
+        logging.LogConfig.SetLogLevel("*", (scope as any).layout.properties.loglevel);
+        let logger = new logging.Logger("Main");
+        //#endregion
+
         scope2 = scope as any;
         scope.vm = new OnDemandExtension(utils.getEnigma(scope), scope);
 
