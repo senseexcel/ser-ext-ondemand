@@ -12,6 +12,7 @@ _temp/
 
 ## Include
 !src/gulpfile.js
+!test/gulpfile.js
 !src/webpack.config.js
 
 ## Standard vccode
