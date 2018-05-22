@@ -516,7 +516,6 @@ class OnDemandController implements ng.IController {
         return new Promise((resolve, reject) => {
 
             let bookmarkId: string = "";
-
             let bookmarkProperties: EngineAPI.IGenericBookmarkProperties =  {
                 qInfo: {
                     qType: "hiddenbookmark"
@@ -551,6 +550,12 @@ class OnDemandController implements ng.IController {
             })
             .then((bookmarkObject) => {
                 bookmarkId = (bookmarkObject as any).id;
+                // this.logger.debug("bookmarkObject", bookmarkObject);
+
+                // bookmarkObject.getLayout()
+                // .then((res) => {
+                //     console.log(res);
+                // });
 
                 switch (this.appPublished) {
                     case true:
@@ -579,16 +584,23 @@ class OnDemandController implements ng.IController {
             this.model.app.getBookmark(id)
             .then((object) => {
                 obj = object;
+                this.logger.debug("fcn: destroyExistingBookmark - bevor getLayout");
                 return object.getLayout();
             })
-            .then((info) => {
-                if((info.qMeta as any).published) {
-                    this.logger.debug("bookmark info", info);
+            .then((layout) => {
+                if((layout.qMeta as any).published && (layout.qMeta as any).privileges.indexOf("publish")!==-1) {
+                    this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish");
                     return obj.unPublish();
                 }
             })
             .then(() => {
-                return this.model.app.destroyBookmark(id);
+                return obj.getLayout();
+            })
+            .then((layout) => {
+                if ((layout.qMeta as any).privileges.indexOf("delete")!==-1) {
+                    this.logger.debug("fcn: destroyExistingBookmark - bevor destroyBookmark");
+                    return this.model.app.destroyBookmark(id);
+                }
             })
             .then((res) => {
                 this.logger.info("Status from delete", res);
@@ -732,7 +744,7 @@ class OnDemandController implements ng.IController {
                 this.start();
                 break;
             case SERState.running:
-            this.title = "Aborting ... ";
+                this.title = "Aborting ... ";
                 this.stopReport();
                 break;
             case SERState.finished:

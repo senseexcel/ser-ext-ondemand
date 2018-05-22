@@ -143,7 +143,7 @@ let config = {
         }),
         new WebPackDeployAfterBuild({
             from: path.resolve(__dirname, "./dist"),
-            to: "C:/QlikShare/StaticContent/Extensions/q2g-ext-bookmark/"
+            to: `C:/QlikShare/StaticContent/Extensions/${packagenName}/`
         })
     ]
 };
