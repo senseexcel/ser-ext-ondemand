@@ -2,6 +2,8 @@
 import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./ser-ext-ondemandDirective.css";
+
+// import { Ser } from "./node_modules/ser-api/index";
 //#endregion
 
 //#region enums
@@ -106,6 +108,9 @@ interface IProperties {
 class OnDemandController implements ng.IController {
 
     //#region variables
+    // testa : Ser.Api.IDomainUser;
+
+
     invalid: boolean = false;
     appId: string;
     appPublished: boolean;
@@ -499,6 +504,7 @@ class OnDemandController implements ng.IController {
                     this.state = SERState.serNoConnectionQlik;
                 }
 
+                this.logger.debug("set Task ID");
                 this.taskId = statusObject.taskId;
 
                 this.clearInterval();
@@ -521,7 +527,8 @@ class OnDemandController implements ng.IController {
                     qType: "hiddenbookmark"
                 },
                 qMetaDef: {
-                    title: this.bookmarkName
+                    title: this.bookmarkName,
+                    approved: false
                 },
                 sheetId: this.sheetId,
                 creationDate: (new Date()).toISOString()
@@ -550,12 +557,6 @@ class OnDemandController implements ng.IController {
             })
             .then((bookmarkObject) => {
                 bookmarkId = (bookmarkObject as any).id;
-                // this.logger.debug("bookmarkObject", bookmarkObject);
-
-                // bookmarkObject.getLayout()
-                // .then((res) => {
-                //     console.log(res);
-                // });
 
                 switch (this.appPublished) {
                     case true:
@@ -580,16 +581,22 @@ class OnDemandController implements ng.IController {
     private destroyExistingBookmark(id: string): Promise<void> {
         this.logger.debug("fcn: destroyExistingBookmark", id);
         return new Promise((resolve, reject) => {
-            let obj;
+            let obj: EngineAPI.IGenericBookmark;
             this.model.app.getBookmark(id)
             .then((object) => {
                 obj = object;
                 this.logger.debug("fcn: destroyExistingBookmark - bevor getLayout");
-                return object.getLayout();
+
+                return obj.getLayout();
+            })
+            .then(() => {
+                return obj.getLayout();
             })
             .then((layout) => {
-                if((layout.qMeta as any).published && (layout.qMeta as any).privileges.indexOf("publish")!==-1) {
-                    this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish");
+                if((layout.qMeta as any).published
+                && (layout.qMeta as any).privileges.indexOf("publish")!==-1
+                && !(layout.qMeta as any).approved) {
+                    this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish", layout);
                     return obj.unPublish();
                 }
             })
