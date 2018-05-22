@@ -2,8 +2,6 @@
 import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import "css!./ser-ext-ondemandDirective.css";
-
-// import { Ser } from "./node_modules/ser-api/index";
 //#endregion
 
 //#region enums
@@ -108,9 +106,6 @@ interface IProperties {
 class OnDemandController implements ng.IController {
 
     //#region variables
-    // testa : Ser.Api.IDomainUser;
-
-
     invalid: boolean = false;
     appId: string;
     appPublished: boolean;
@@ -506,6 +501,7 @@ class OnDemandController implements ng.IController {
 
                 this.logger.debug("set Task ID");
                 this.taskId = statusObject.taskId;
+                this.state = SERState.running;
 
                 this.clearInterval();
                 this.setInterval(this.intervalShort);
