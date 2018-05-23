@@ -1,0 +1,25 @@
+{
+  "name": "ser-ext-ondemand-test",
+  "version": "0.0.1",
+  "license": "MIT",
+  "description": "test for extension ser-ext-ondemand",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/senseexcel/ser-ext-ondemand"
+  },
+  "author": "Thomas Häning, Konrad Mattheis (qlik2go) ",
+  "devDependencies": {
+    "@types/chai": "4.1.2",
+    "@types/mocha": "2.2.48",
+    "chai": "4.1.2",
+    "gulp": "3.9.1",
+    "gulp-less": "3.5.0",
+    "gulp-clean": "0.4.0",
+    "mocha": "5.0.3",
+    "typescript": "2.7.2"
+  },
+  "dependencies": {},
+  "scripts": {
+    "test": "tsc -p tsconfig.json && gulp less && mocha --recursive"
+  }
+}

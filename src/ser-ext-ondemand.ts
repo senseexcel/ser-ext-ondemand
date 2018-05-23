@@ -3,7 +3,7 @@ import * as qvangular from "qvangular";
 import * as qlik from "qlik";
 import * as template from "text!./ser-ext-ondemand.html";
 import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
-import { BookmarkDirectiveFactory } from "./ser-ext-ondemandDirective";
+import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 //#endregion
 
 //#region registrate services
@@ -11,14 +11,9 @@ qvangular.service<services.IRegistrationProvider>("$registrationProvider", servi
 .implementObject(qvangular);
 //#endregion
 
-//#region Logger
-logging.LogConfig.SetLogLevel("*", logging.LogLevel.warn);
-let logger = new logging.Logger("Main");
-//#endregion
-
 //#region Directives
 var $injector = qvangular.$injector;
-utils.checkDirectiveIsRegistrated($injector, qvangular, "", BookmarkDirectiveFactory("Ondemandextension"),
+utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFactory("Ondemandextension"),
     "OndemandExtension");
 //#endregion
 
@@ -134,7 +129,35 @@ let parameter = {
                                 label: "Not On"
                             }],
                             defaultValue: false
-                            }
+                        },
+                        loglevel: {
+                            ref: "properties.loglevel",
+                            label: "loglevel",
+                            component: "dropdown",
+                            options: [{
+                                value: 0,
+                                label: "trace"
+                            }, {
+                                value: 1,
+                                label: "debug"
+                            }, {
+                                value: 2,
+                                label: "info"
+                            }, {
+                                value: 3,
+                                label: "warn"
+                            }, {
+                                value: 4,
+                                label: "error"
+                            }, {
+                                value: 5,
+                                label: "fatal"
+                            }, {
+                                value: 6,
+                                label: "off"
+                            }],
+                            defaultValue: 3
+                        },
                     }
                 }
             }
@@ -142,7 +165,6 @@ let parameter = {
     }
 };
 //#endregion
-
 
 class OnDemandExtension {
 
@@ -169,7 +191,7 @@ class OnDemandExtension {
                 });
 
             } catch (error) {
-                console.error("E");
+                console.error("ERROR", error);
             }
         }
 
@@ -197,7 +219,19 @@ export = {
     definition: parameter,
     initialProperties: { },
     template: template,
+    paint: () => {
+        //
+    },
+    resize: () => {
+        //
+    },
     controller: ["$scope", function (scope: utils.IVMScope<OnDemandExtension>) {
+
+        //#region Logger
+        logging.LogConfig.SetLogLevel("*", (scope as any).layout.properties.loglevel);
+        let logger = new logging.Logger("Main");
+        //#endregion
+
         scope2 = scope as any;
         scope.vm = new OnDemandExtension(utils.getEnigma(scope), scope);
 

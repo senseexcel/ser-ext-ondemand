@@ -8,7 +8,7 @@
      <div style="position:absolute">
         <div ng-click="vm.action()"
              class="lui-button  lui-button--rounded  lui-button--info"
-             ng-class="{'inactive': (vm.state === 0 && !vm.clicked) || vm.state === 4}"
+             ng-class="{'inactive': (vm.state === 0 && !vm.clicked) || vm.state === 4 || !vm.invalid}"
              q2g-shortcut
              shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
              shortcut-action="vm.action()">
@@ -21,4 +21,8 @@
      </div>
      <div style="position:relative; top: 25px" ng-if="vm.reportError">Check Logs</div>
     <q2g-identifier show="vm.isEditMode()"></q2g-identifier>
+
+    <div ng-if="vm.isEditMode()"
+          class="editMode">
+    </div>
 </div>
