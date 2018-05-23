@@ -1,8 +1,25 @@
 //#region imports
-import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
-import * as template from "text!./ser-ext-ondemandDirective.html";
+import * as template                    from "text!./ser-ext-ondemandDirective.html";
+import { utils,
+         logging,
+         directives }                   from "./node_modules/davinci.js/dist/umd/daVinci";
+import { ISerConfig,
+         ISerReport,
+         ISerGeneral,
+         ISerConnection,
+         ISerTemplate}                from "./node_modules/ser.api/index";
 import "css!./ser-ext-ondemandDirective.css";
 //#endregion
+
+export enum SelectionMode {
+	Normal = 0,
+	OnDemandOff = 1,
+	OnDemandOn = 2,
+}
+export enum SelectionType {
+	Static = 0,
+	Dynamic = 1,
+}
 
 //#region enums
 enum SERState {
@@ -24,6 +41,15 @@ enum ETaskOption {
 //#endregion
 
 //#region interfaces
+
+interface ISERRequestStart extends ISerConfig {
+    onDemand: boolean;
+}
+
+interface ISerReportExtended extends ISerReport {
+    distribute: ISERDistribute;
+}
+
 interface ISERResponseStart {
     status: number;
     taskId: string;
@@ -48,38 +74,6 @@ interface ISERRequestStatus {
     tasks?: ETaskOption | string;
 }
 
-interface ISERRequestStart {
-    onDemand: boolean;
-    tasks: ISERTask[];
-}
-
-interface ISERReport {
-    general: ISERGeneral;
-    connections: ISERConnection[];
-    template: ISERTemplate;
-    distribute: ISERDistribute;
-}
-
-interface ISERTask {
-    reports: ISERReport[];
-}
-
-interface ISERGeneral {
-    useUserSelections: string;
-}
-
-interface ISERConnection {
-    sharedSession: boolean;
-    app: string;
-}
-
-interface ISERTemplate {
-    input: string;
-    output: string;
-    outputFormat: string;
-    selections?: ISERSelection[];
-}
-
 interface ISERDistribute {
     hub: ISERHub;
 }
@@ -89,18 +83,13 @@ interface ISERHub {
     connections: string;
 }
 
-interface ISERSelection {
-    type: string;
-    objectType: string;
-    values: string;
-}
-
 interface IProperties {
     template: string;
     output: string;
     selection: number;
     directDownload: boolean;
 }
+
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -387,11 +376,11 @@ class OnDemandController implements ng.IController {
 
     private createRequest(bookmarkId: string): ISERRequestStart {
         this.logger.debug("fcn: createRequest");
-        let general: ISERGeneral = {
-            useUserSelections: "OnDemandOn"
+        let general: ISerGeneral = {
+            useUserSelections: SelectionMode.OnDemandOn
         };
-        let connection: ISERConnection;
-        let template: ISERTemplate = {
+        let connection: ISerConnection;
+        let template: ISerTemplate = {
             input: this.properties.template,
             output: "OnDemand",
             outputFormat: this.properties.output
@@ -403,7 +392,7 @@ class OnDemandController implements ng.IController {
                     app: this.appId,
                     sharedSession: true
                 };
-                general.useUserSelections = "OnDemandOn";
+                general.useUserSelections = SelectionMode.OnDemandOn;
                 break;
 
             case 1:
@@ -411,21 +400,21 @@ class OnDemandController implements ng.IController {
                     app: this.appId,
                     sharedSession: false
                 };
-                general.useUserSelections = "OnDemandOff";
+                general.useUserSelections = SelectionMode.OnDemandOff;
                 template = {
                     input: this.properties.template,
                     output: "OnDemand",
                     outputFormat: this.properties.output,
                     selections: [{
-                        type: "static",
+                        type: SelectionType.Static,
                         objectType: "hiddenbookmark",
-                        values: bookmarkId
+                        values: [bookmarkId]
                     }]
                 };
                 break;
 
             default:
-                general.useUserSelections = "Normal";
+                general.useUserSelections = SelectionMode.Normal;
                 connection = {
                     app: this.appId,
                     sharedSession: false
@@ -433,20 +422,22 @@ class OnDemandController implements ng.IController {
                 break;
         }
 
+        let report: ISerReportExtended = {
+            general: general,
+            connections: [connection],
+            template: template,
+            distribute: {
+                hub: {
+                    connections: "@CONFIGCONNECTION@",
+                    mode: "Override"
+                }
+            }
+        };
+
         return {
             onDemand: true,
             tasks: [{
-                reports: [{
-                    general: general,
-                    connections: [connection],
-                    template: template,
-                    distribute: {
-                        hub: {
-                            connections: "@CONFIGCONNECTION@",
-                            mode: "Override"
-                        }
-                    }
-                }]
+                reports: [report]
             }]
         };
     }
