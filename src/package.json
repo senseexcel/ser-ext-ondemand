@@ -28,6 +28,7 @@
     "postcss-loader": "2.1.4",
     "precss": "3.1.2",
     "raw-loader": "0.5.1",
+    "ser.api": "3.1.6",
     "style-loader": "0.21.0",
     "ts-loader": "4.2.0",
     "typescript": "2.7.2",
