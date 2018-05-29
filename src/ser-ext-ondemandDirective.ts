@@ -580,20 +580,31 @@ class OnDemandController implements ng.IController {
                 return obj.getLayout();
             })
             .then((layout) => {
-                if((layout.qMeta as any).published
-                && (layout.qMeta as any).privileges.indexOf("publish")!==-1
-                && !(layout.qMeta as any).approved) {
-                    this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish", layout);
-                    return obj.unPublish();
+                this.logger.debug("fcn: destroyExistingBookmark - layout bookmark", layout);
+                try {
+                    if(typeof((layout.qMeta as any).published)!=="undefined"
+                    && typeof((layout.qMeta as any).privileges)!=="undefined"
+                    && (layout.qMeta as any).privileges.indexOf("publish")!==-1
+                    && !(layout.qMeta as any).approved) {
+                        this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish", layout);
+                        return obj.unPublish();
+                    }
+                } catch (error) {
+                    reject(error);
                 }
             })
             .then(() => {
                 return obj.getLayout();
             })
             .then((layout) => {
-                if ((layout.qMeta as any).privileges.indexOf("delete")!==-1) {
-                    this.logger.debug("fcn: destroyExistingBookmark - bevor destroyBookmark");
-                    return this.model.app.destroyBookmark(id);
+                try {
+                    if (typeof((layout.qMeta as any).privileges)!=="undefined"
+                    &&(layout.qMeta as any).privileges.indexOf("delete")!==-1) {
+                        this.logger.debug("fcn: destroyExistingBookmark - bevor destroyBookmark");
+                        return this.model.app.destroyBookmark(id);
+                    }
+                } catch (error) {
+                    reject(error);
                 }
             })
             .then((res) => {
