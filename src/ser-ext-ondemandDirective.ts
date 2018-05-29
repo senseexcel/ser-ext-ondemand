@@ -90,6 +90,20 @@ interface IProperties {
     directDownload: boolean;
 }
 
+interface INxAppPropertiesExtended extends EngineAPI.INxAppProperties {
+    published: boolean;
+}
+
+interface IGenericBookmarkLayoutMetaExtended extends EngineAPI.INxMetaTitleDescription {
+    published: boolean;
+    privileges: string[];
+    approved: boolean;
+    title: string;
+}
+
+interface IGenericBookmarkExtended extends EngineAPI.IGenericBookmark {
+    id: string;
+}
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -348,10 +362,10 @@ class OnDemandController implements ng.IController {
     private getIsPublished(): Promise<void> {
         return new Promise((resolve, reject) => {
             this.model.app.getAppProperties()
-            .then((appProperties) => {
+            .then((appProperties: INxAppPropertiesExtended) => {
                 this.appPublished = false;
-                if(typeof((appProperties as any).published) !=="undefined") {
-                    this.appPublished = (appProperties as any).published;
+                if(typeof(appProperties.published) !=="undefined") {
+                    this.appPublished = appProperties.published;
                 }
                 resolve();
             })
@@ -527,9 +541,11 @@ class OnDemandController implements ng.IController {
             })
             .then((bookmarks) => {
                 let proms: Promise<void>[] = [];
-                for (const bookmark of (bookmarks as any)) {
+                let bookmarksTyped: EngineAPI.INxContainerEntry<any>[] = bookmarks as any;
+                for (const bookmark of bookmarksTyped) {
                     try {
-                        if (bookmark.qMeta.title === this.bookmarkName) {
+                        let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
+                        if (meta.title === this.bookmarkName) {
                             proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
                         }
                     } catch {
@@ -542,8 +558,8 @@ class OnDemandController implements ng.IController {
                 this.logger.debug("bookmark properties", bookmarkProperties);
                 return this.model.app.createBookmark(bookmarkProperties);
             })
-            .then((bookmarkObject) => {
-                bookmarkId = (bookmarkObject as any).id;
+            .then((bookmarkObject: IGenericBookmarkExtended) => {
+                bookmarkId = bookmarkObject.id;
 
                 switch (this.appPublished) {
                     case true:
@@ -576,16 +592,14 @@ class OnDemandController implements ng.IController {
 
                 return obj.getLayout();
             })
-            .then(() => {
-                return obj.getLayout();
-            })
             .then((layout) => {
                 this.logger.debug("fcn: destroyExistingBookmark - layout bookmark", layout);
                 try {
-                    if(typeof((layout.qMeta as any).published)!=="undefined"
-                    && typeof((layout.qMeta as any).privileges)!=="undefined"
-                    && (layout.qMeta as any).privileges.indexOf("publish")!==-1
-                    && !(layout.qMeta as any).approved) {
+                    let meta: IGenericBookmarkLayoutMetaExtended = layout.qMeta as IGenericBookmarkLayoutMetaExtended;
+                    if(typeof(meta.published)!=="undefined"
+                    && typeof(meta.privileges)!=="undefined"
+                    && meta.privileges.indexOf("publish")!==-1
+                    && !meta.approved) {
                         this.logger.debug("fcn: destroyExistingBookmark - bevor unpublish", layout);
                         return obj.unPublish();
                     }
@@ -598,8 +612,9 @@ class OnDemandController implements ng.IController {
             })
             .then((layout) => {
                 try {
-                    if (typeof((layout.qMeta as any).privileges)!=="undefined"
-                    &&(layout.qMeta as any).privileges.indexOf("delete")!==-1) {
+                    let meta: IGenericBookmarkLayoutMetaExtended = layout.qMeta as IGenericBookmarkLayoutMetaExtended;
+                    if (typeof(meta.privileges)!=="undefined"
+                    && meta.privileges.indexOf("delete")!==-1) {
                         this.logger.debug("fcn: destroyExistingBookmark - bevor destroyBookmark");
                         return this.model.app.destroyBookmark(id);
                     }
