@@ -165,7 +165,6 @@ class OnDemandController implements ng.IController {
     }
     public set state(v : SERState) {
         if (v !== this._state) {
-
             this.logger.debug("STATE: ", v);
 
             if (this.noPropertiesSet) {
@@ -263,11 +262,7 @@ class OnDemandController implements ng.IController {
                             if (that.tempContentLibIndex !== res.properties.templateContentLibrary) {
                                 res.properties.template = null;
                             }
-
                             that.tempContentLibIndex = res.properties.templateContentLibrary;
-
-
-                            that.logger.debug("CHANGED", res);
 
                             if(isNull(res.properties.template)) {
                                 that.noPropertiesSet = true;
