@@ -135,6 +135,7 @@ class OnDemandController implements ng.IController {
     running: boolean = false;
     sheetId: string;
     title: string = "Generate Report";
+    tempContentLibIndex: number;
     taskId: string;
     timeout: ng.ITimeoutService;
     timeoutAfterStop: number = 2000;
@@ -164,13 +165,14 @@ class OnDemandController implements ng.IController {
     }
     public set state(v : SERState) {
         if (v !== this._state) {
-            this._state = v;
 
             this.logger.debug("STATE: ", v);
 
             if (this.noPropertiesSet) {
                 v = SERState.noProperties;
             }
+
+            this._state = v;
 
             switch (v) {
                 case SERState.ready:
@@ -257,6 +259,15 @@ class OnDemandController implements ng.IController {
                 value.on("changed", function () {
                     value.getProperties()
                         .then((res) => {
+
+                            if (that.tempContentLibIndex !== res.properties.templateContentLibrary) {
+                                res.properties.template = null;
+                            }
+
+                            that.tempContentLibIndex = res.properties.templateContentLibrary;
+
+
+                            that.logger.debug("CHANGED", res);
 
                             if(isNull(res.properties.template)) {
                                 that.noPropertiesSet = true;
