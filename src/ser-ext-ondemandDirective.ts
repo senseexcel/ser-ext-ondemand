@@ -7,7 +7,8 @@ import { ISerConfig,
          ISerReport,
          ISerGeneral,
          ISerConnection,
-         ISerTemplate}                from "./node_modules/ser.api/index";
+         ISerTemplate}                  from "./node_modules/ser.api/index";
+import { isNull }                       from "util";
 import "css!./ser-ext-ondemandDirective.css";
 //#endregion
 
@@ -28,7 +29,8 @@ enum SERState {
     ready,
     error,
     serNotRunning,
-    serNoConnectionQlik
+    serNoConnectionQlik,
+    noProperties
 }
 
 enum EVersionOption {
@@ -114,6 +116,7 @@ class OnDemandController implements ng.IController {
     appPublished: boolean;
     bookmarkName: string = "serBookmarkOnDemand";
     clicked: boolean = false;
+    actionRunable: boolean = false;
     editMode: boolean;
     element: JQuery;
     host: string;
@@ -121,6 +124,7 @@ class OnDemandController implements ng.IController {
     intervalShort: number = 3000;
     intervalLong: number = 6000;
     link: string;
+    noPropertiesSet: boolean = true;
     properties: IProperties = {
         template: " ",
         output: " ",
@@ -164,10 +168,15 @@ class OnDemandController implements ng.IController {
 
             this.logger.debug("STATE: ", v);
 
+            if (this.noPropertiesSet) {
+                v = SERState.noProperties;
+            }
+
             switch (v) {
                 case SERState.ready:
                     this.running = false;
                     this.clicked = false;
+                    this.actionRunable = true;
                     setTimeout(() => {
                         this.link = null;
                     }, 1000);
@@ -176,6 +185,7 @@ class OnDemandController implements ng.IController {
 
                 case SERState.running:
                     this.running = true;
+                    this.actionRunable = true;
                     this.title  = "Running ... (click to abort)";
                     break;
 
@@ -183,6 +193,7 @@ class OnDemandController implements ng.IController {
 
                     this.running = false;
                     this.clicked = false;
+                    this.actionRunable = true;
 
                     this.title  = "Download Report";
                     if (this.properties.directDownload) {
@@ -196,18 +207,28 @@ class OnDemandController implements ng.IController {
                 case SERState.serNotRunning:
                     this.running = false;
                     this.clicked = false;
+                    this.actionRunable = false;
                     this.title  = "SER not available";
                     break;
 
                 case SERState.serNoConnectionQlik:
                     this.running = false;
                     this.clicked = false;
+                    this.actionRunable = false;
                     this.title = "SER no connection to Qlik";
+                    break;
+
+                case SERState.noProperties:
+                    this.running = false;
+                    this.clicked = false;
+                    this.actionRunable = false;
+                    this.title = "No Properties selected";
                     break;
 
                 default:
                     this.running = false;
                     this.clicked = false;
+                    this.actionRunable = true;
                     this.title = "Error while running - Retry";
                     break;
             }
@@ -236,6 +257,14 @@ class OnDemandController implements ng.IController {
                 value.on("changed", function () {
                     value.getProperties()
                         .then((res) => {
+
+                            if(isNull(res.properties.template)) {
+                                that.noPropertiesSet = true;
+                                that.state = SERState.noProperties;
+                            } else {
+                                that.noPropertiesSet = false;
+                                that.state = SERState.ready;
+                            }
                             that.setProperties(res.properties);
                         })
                         .catch( (error) => {
