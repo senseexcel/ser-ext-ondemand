@@ -1,9 +1,16 @@
 //#region Imports
-import * as qvangular from "qvangular";
-import * as qlik from "qlik";
-import * as template from "text!./ser-ext-ondemand.html";
-import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
-import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
+import * as qvangular                   from "qvangular";
+import * as qlik                        from "qlik";
+import * as template                    from "text!./ser-ext-ondemand.html";
+
+import { OnDemandDirectiveFactory }     from "./ser-ext-ondemandDirective";
+
+import { IPropertyContent,
+         IDataLabel }                   from "./lib/interfaces";
+import { utils,
+         logging,
+         services,
+         version }                      from "./node_modules/davinci.js/dist/umd/daVinci";
 //#endregion
 
 //#region registrate services
@@ -17,38 +24,7 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFac
     "OndemandExtension");
 //#endregion
 
-//#region interfaces
-interface IDataLabel {
-    label: string;
-    value: string | number;
-}
-
-interface IPropertyContent {
-    dataLib: IDataLabel[];
-    dataCon: IDataLabel[];
-}
-//#endregion
-
-function getListOfLib(app: EngineAPI.IApp): any {
-    app.getContentLibraries()
-    .then((res) => {
-        let list: Array<EngineAPI.IContentLibraryListItem> = res as any;
-        let returnVal = [];
-
-        for (const item of list) {
-            returnVal.push({
-                value: item.qName,
-                label: decodeURI(item.qName)
-            });
-        }
-        return returnVal;
-    })
-    .catch((error) => {
-        console.error("ERROR", error);
-    });
-}
-
-let scope2 : any;
+let scope2 : utils.IVMScope<OnDemandExtension>;
 
 //#region extension properties
 let parameter = {
@@ -67,18 +43,31 @@ let parameter = {
                             ref: "properties.templateContentLibrary",
                             label: "Library",
                             component: "dropdown",
-                            options: function()
+                            options: function(data: any)
                             {
-                                return scope2.dataLib;
+                                if (typeof(scope2.vm.content)!=="undefined") {
+                                    return scope2.vm.content.dataLib;
+                                }
+                                return [{value: data.properties.templateContentLibrary, label: data.properties.templateContentLibrary}];
                             }
                         },
                         templateContent: {
                             ref: "properties.template",
                             label: "Content",
                             component: "dropdown",
-                            options: function(a: any)
+                            options: function(data: any)
                             {
-                                return scope2.dataCon[a.properties.templateContentLibrary];
+                                if (typeof(scope2.vm.content)!=="undefined") {
+                                    let counter = 0;
+                                    for (const library of scope2.vm.content.dataLib) {
+                                        if (library.value === data.properties.templateContentLibrary) {
+                                            return scope2.vm.content.dataCon[counter];
+                                        }
+                                        counter++;
+                                    }
+                                }
+                                let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
+                                return [{value: data.properties.template, label: defaultRes}];
                             },
                             show: function (data: any) {
                                 if (data.properties.templateContentLibrary!==null) {
@@ -170,6 +159,21 @@ class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
     scope: any;
+    content : IPropertyContent;
+
+    //#region logger
+    private _logger: logging.Logger;
+    private get logger(): logging.Logger {
+        if (!this._logger) {
+            try {
+                this._logger = new logging.Logger("OnDemandExtension");
+            } catch (error) {
+                console.error("ERROR in create logger instance", error);
+            }
+        }
+        return this._logger;
+    }
+    //#endregion
 
     //#region mode
     private _mode : boolean;
@@ -179,28 +183,32 @@ class OnDemandExtension {
     public set mode(v : boolean) {
         if (this.mode !== v) {
             this._mode = v;
-            try {
 
-                getPropertyContent(this.model.app)
-                .then((res) => {
-                    (this.scope as any).dataLib = res.dataLib;
-                    (this.scope as any).dataCon = res.dataCon;
-                })
-                .catch((error) => {
-                    console.error("ERROR", error);
-                });
-
-            } catch (error) {
-                console.error("ERROR", error);
-            }
+            this.getPropertyContent(this.model.app)
+            .then((content) => {
+                this.content = content;
+            })
+            .catch((error) => {
+                this.logger.error("ERROR in constructor of OnDemandExtension", error);
+            });
         }
-
     }
     //#endregion
 
-    constructor(model: EngineAPI.IGenericObject, scope: any) {
-        this.model = model;
+    constructor(scope: utils.IVMScope<OnDemandExtension>) {
+        this.logger.info(`onDemandExtension loaded and uses daVinci Version ${version}`, "");
+
         this.scope = scope;
+        this.model = utils.getEnigma(scope);
+
+        this.getPropertyContent(this.model.app)
+        .then((content) => {
+            this.content = content;
+        })
+        .catch((error) => {
+            this.logger.error("ERROR in constructor of OnDemandExtension", error);
+        });
+
     }
 
     public isEditMode() {
@@ -211,6 +219,56 @@ class OnDemandExtension {
             this.mode = true;
             return true;
         }
+    }
+
+    private  getPropertyContent(app: EngineAPI.IApp): Promise<IPropertyContent> {
+        return new Promise((resolve, reject) => {
+            app.getContentLibraries()
+            .then((res: any) => {
+                let list: Array<EngineAPI.IContentLibraryListItem> = res;
+                let returnVal: IDataLabel[] = [];
+                let returnValContent: IDataLabel[][] = [];
+                let index: number = 0;
+                for (const item of list) {
+                    let inApp: boolean = false;
+                    if (item.qAppSpecific === true) {
+                        inApp = true;
+                    }
+                    returnVal.push({
+                        value: item.qAppSpecific===true?"in App":item.qName,
+                        label: item.qAppSpecific===true?"in App":item.qName
+                    });
+                    index++;
+                    let items = [];
+                    app.getLibraryContent(item.qName)
+                    .then((content: any) => {
+                        for (const value of content) {
+                            let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
+                            let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
+                            if (last4 === ".xls" || last5 === ".xlsx") {
+                                let lib = (value.qUrl as string).split("/")[2];
+                                let name = (value.qUrl as string).split("/")[3];
+                                items.push({
+                                    value: `content://${inApp===true?"":lib}/${name}`,
+                                    label: decodeURI(name)
+                                });
+                            }
+                        }
+                    })
+                    .catch((error) => {
+                        console.error("ERROR", error);
+                    });
+                    returnValContent.push(items);
+                }
+                resolve({
+                    dataLib: returnVal,
+                    dataCon: returnValContent
+                });
+            })
+            .catch((error) => {
+                reject(error);
+            });
+        });
     }
 
 }
@@ -233,77 +291,6 @@ export = {
         //#endregion
 
         scope2 = scope as any;
-        scope.vm = new OnDemandExtension(utils.getEnigma(scope), scope);
-
-        let app: EngineAPI.IApp = scope.vm.model.app;
-
-        getPropertyContent(app)
-        .then((res) => {
-            (scope as any).dataLib = res.dataLib;
-            (scope as any).dataCon = res.dataCon;
-        })
-        .catch((error) => {
-            console.error("ERROR", error);
-        });
+        scope.vm = new OnDemandExtension(scope);
     }]
 };
-
-function getPropertyContent(app: EngineAPI.IApp): Promise<IPropertyContent> {
-    return new Promise((resolve, reject) => {
-        app.getContentLibraries()
-        .then((res: any) => {
-            let list: Array<EngineAPI.IContentLibraryListItem> = res;
-            let returnVal = [];
-            let returnValContent = [];
-
-            let index: number = 0;
-            for (const item of list) {
-                let inApp: boolean = false;
-                if (item.qAppSpecific === true) {
-                    inApp = true;
-                }
-                returnVal.push({
-                    value: index,
-                    label: item.qAppSpecific===true?"in App":item.qName
-                });
-                index++;
-
-                let items = [];
-
-                app.getLibraryContent(item.qName)
-                .then((content: any) => {
-
-                    for (const value of content) {
-
-                        let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
-                        let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
-
-                        if (last4 === ".xls" || last5 === ".xlsx") {
-                            let lib = (value.qUrl as string).split("/")[2];
-                            let name = (value.qUrl as string).split("/")[3];
-                            items.push({
-                                value: `content://${inApp===true?"":lib}/${name}`,
-                                label: decodeURI(name)
-                            });
-                        }
-                    }
-
-                })
-                .catch((error) => {
-                    console.error("ERROR", error);
-                });
-
-                returnValContent.push(items);
-            }
-
-
-            resolve({
-                dataLib: returnVal,
-                dataCon: returnValContent
-            });
-        })
-        .catch((error) => {
-            reject(error);
-        });
-    });
-}

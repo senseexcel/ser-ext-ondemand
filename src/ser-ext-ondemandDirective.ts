@@ -1,111 +1,30 @@
 //#region imports
+import "css!./ser-ext-ondemandDirective.css";
+
 import * as template                    from "text!./ser-ext-ondemandDirective.html";
+
+import { isNull }                       from "util";
+
 import { utils,
          logging,
          directives }                   from "./node_modules/davinci.js/dist/umd/daVinci";
-import { ISerConfig,
-         ISerReport,
-         ISerGeneral,
+import { ISerGeneral,
          ISerConnection,
          ISerTemplate}                  from "./node_modules/ser.api/index";
-import { isNull }                       from "util";
-import "css!./ser-ext-ondemandDirective.css";
-//#endregion
-
-export enum SelectionMode {
-	Normal = 0,
-	OnDemandOff = 1,
-	OnDemandOn = 2,
-}
-export enum SelectionType {
-	Static = 0,
-	Dynamic = 1,
-}
-
-//#region enums
-enum SERState {
-    running,
-    finished,
-    ready,
-    error,
-    serNotRunning,
-    serNoConnectionQlik,
-    noProperties
-}
-
-enum EVersionOption {
-    all
-}
-
-enum ETaskOption {
-    all
-}
-//#endregion
-
-//#region interfaces
-
-interface ISERRequestStart extends ISerConfig {
-    onDemand: boolean;
-}
-
-interface ISerReportExtended extends ISerReport {
-    distribute: ISERDistribute;
-}
-
-interface ISERResponseStart {
-    status: number;
-    taskId: string;
-}
-
-interface ISERResponseStatusVersion {
-    name: string;
-    version: string;
-}
-
-interface ISERResponseStatus {
-    status: number;
-    log: string;
-    link: string;
-    taskId: string;
-    versions: ISERResponseStatusVersion[];
-}
-
-interface ISERRequestStatus {
-    taskId?: string;
-    versions?: EVersionOption | string;
-    tasks?: ETaskOption | string;
-}
-
-interface ISERDistribute {
-    hub: ISERHub;
-}
-
-interface ISERHub {
-    mode: string;
-    connections: string;
-}
-
-interface IProperties {
-    template: string;
-    output: string;
-    selection: number;
-    directDownload: boolean;
-}
-
-interface INxAppPropertiesExtended extends EngineAPI.INxAppProperties {
-    published: boolean;
-}
-
-interface IGenericBookmarkLayoutMetaExtended extends EngineAPI.INxMetaTitleDescription {
-    published: boolean;
-    privileges: string[];
-    approved: boolean;
-    title: string;
-}
-
-interface IGenericBookmarkExtended extends EngineAPI.IGenericBookmark {
-    id: string;
-}
+import { IProperties,
+         ISERRequestStart,
+         ISerReportExtended,
+         ISERResponseStart,
+         ISERResponseStatus,
+         IGenericBookmarkExtended,
+         ISERRequestStatus,
+         IPropertyContent,
+         IGenericBookmarkLayoutMetaExtended,
+         INxAppPropertiesExtended }     from "./lib/interfaces";
+import { ESERState,
+         EVersionOption,
+         SelectionType,
+         SelectionMode }                from "./lib/enums";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -156,25 +75,25 @@ class OnDemandController implements ng.IController {
     //#endregion
 
     //#region state
-    private _state : SERState;
-    public get state() : SERState {
+    private _state : ESERState;
+    public get state() : ESERState {
         if (typeof(this._state)!=="undefined") {
             return this._state;
         }
-        return SERState.ready;
+        return ESERState.ready;
     }
-    public set state(v : SERState) {
+    public set state(v : ESERState) {
         if (v !== this._state) {
             this.logger.debug("STATE: ", v);
 
             if (this.noPropertiesSet) {
-                v = SERState.noProperties;
+                v = ESERState.noProperties;
             }
 
             this._state = v;
 
             switch (v) {
-                case SERState.ready:
+                case ESERState.ready:
                     this.running = false;
                     this.clicked = false;
                     this.actionRunable = true;
@@ -184,13 +103,13 @@ class OnDemandController implements ng.IController {
                     this.title  = "Generate Report";
                     break;
 
-                case SERState.running:
+                case ESERState.running:
                     this.running = true;
                     this.actionRunable = true;
                     this.title  = "Running ... (click to abort)";
                     break;
 
-                case SERState.finished:
+                case ESERState.finished:
 
                     this.running = false;
                     this.clicked = false;
@@ -205,21 +124,21 @@ class OnDemandController implements ng.IController {
                     this.setInterval(this.intervalLong);
                     break;
 
-                case SERState.serNotRunning:
+                case ESERState.serNotRunning:
                     this.running = false;
                     this.clicked = false;
                     this.actionRunable = false;
                     this.title  = "SER not available";
                     break;
 
-                case SERState.serNoConnectionQlik:
+                case ESERState.serNoConnectionQlik:
                     this.running = false;
                     this.clicked = false;
                     this.actionRunable = false;
                     this.title = "SER no connection to Qlik";
                     break;
 
-                case SERState.noProperties:
+                case ESERState.noProperties:
                     this.running = false;
                     this.clicked = false;
                     this.actionRunable = false;
@@ -246,6 +165,32 @@ class OnDemandController implements ng.IController {
         if (value !== this._model) {
             try {
                 this._model = value;
+
+                let hostArr: Array<string> = ((this.model as any).session.rpc.url as string).split("/");
+                this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
+
+                let arrProm: Promise<void>[] = [];
+                arrProm.push(this.getUsername());
+                arrProm.push(this.getIsPublished());
+
+                this.getSheetId()
+                .catch((error) => {
+                    this.logger.info("no sheet found");
+                    throw error;
+                });
+
+                Promise.all(arrProm)
+                .then(() => {
+                    this.invalid = true;
+                    this.logger.info(this.username);
+                })
+                .catch((error) => {
+                    this.logger.error("error in constructor", error);
+                });
+
+                this.getStatus(this.taskId);
+                this.setInterval(this.intervalLong);
+
                 this.model.app.getAppLayout()
                     .then((res) => {
                         this.appId = res.qFileName;
@@ -255,28 +200,10 @@ class OnDemandController implements ng.IController {
                 });
 
                 var that = this;
-                value.on("changed", function () {
-                    value.getProperties()
-                        .then((res) => {
-
-                            if (that.tempContentLibIndex !== res.properties.templateContentLibrary) {
-                                res.properties.template = null;
-                            }
-                            that.tempContentLibIndex = res.properties.templateContentLibrary;
-
-                            if(isNull(res.properties.template)) {
-                                that.noPropertiesSet = true;
-                                that.state = SERState.noProperties;
-                            } else {
-                                that.noPropertiesSet = false;
-                                that.state = SERState.ready;
-                            }
-                            that.setProperties(res.properties);
-                        })
-                        .catch( (error) => {
-                            this.logger.error("ERROR in setter of model ", error);
-                    });
-                });
+                this.modelOnChangedFunction = function() {
+                    that.modelChanged(this);
+                };
+                value.on("changed", this.modelOnChangedFunction);
                 value.emit("changed");
             } catch (error) {
                 this.logger.error("ERROR in setter of model", error);
@@ -285,6 +212,21 @@ class OnDemandController implements ng.IController {
     }
     //#endregion
 
+    //#region libraryContent
+    private _libraryContent : IPropertyContent;
+    public get libraryContent() : IPropertyContent {
+        return this._libraryContent;
+    }
+    public set libraryContent(v : IPropertyContent) {
+        if (v !== this._libraryContent && typeof(v)!=="undefined") {
+            this._libraryContent = v;
+        }
+
+    }
+    //#endregion
+
+    modelOnChangedFunction : ()=>void = null;
+
     $onInit(): void {
         this.logger.debug("initialisation from BookmarkController");
     }
@@ -292,6 +234,10 @@ class OnDemandController implements ng.IController {
     $onDestroy(): void {
         try {
             this.clearInterval();
+            if (typeof(this.modelOnChangedFunction)=== "function") {
+                (this.model as any).removeListener("changed", this.modelOnChangedFunction);
+            }
+            // this.model.
         } catch {
             this.logger.debug("could not clear interval onDestroy");
         }
@@ -310,34 +256,52 @@ class OnDemandController implements ng.IController {
         this.element = element;
         this.timeout = timeout;
 
-        let hostArr: Array<string> = ((this.model as any).session.rpc.url as string).split("/");
-        this.host = `${hostArr[0]==="wss:"?"https":"http"}://${hostArr[2]}${hostArr[3]!=="app"?"/"+hostArr[3]:""}`;
-
-        let arrProm: Promise<void>[] = [];
-        arrProm.push(this.getUsername());
-        arrProm.push(this.getIsPublished());
-
-        this.getSheetId()
-        .catch((error) => {
-            this.logger.info("no sheet found");
-            throw error;
-        });
-
-        Promise.all(arrProm)
-        .then(() => {
-            this.invalid = true;
-            this.logger.info(this.username);
-        })
-        .catch((error) => {
-            this.logger.error("error in constructor", error);
-        });
-
-
-        this.getStatus(this.taskId);
-        this.setInterval(this.intervalLong);
     }
 
     //#region private function
+    private modelChanged(value: EngineAPI.IGenericObject): void {
+            this.logger.debug("CHANGE REGISTRATED", "");
+
+            value.getProperties()
+            .then((res) => {
+                if ((typeof(this.tempContentLibIndex)!=="undefined"
+                        && this.tempContentLibIndex !== res.properties.templateContentLibrary)
+                        || !this.checkIfTemplateExistsAsContent(res.properties.template)) {
+                    res.properties.template = null;
+                }
+                this.tempContentLibIndex = res.properties.templateContentLibrary;
+
+                if(isNull(res.properties.template)) {
+                    this.noPropertiesSet = true;
+                    this.state = ESERState.noProperties;
+                } else {
+                    this.noPropertiesSet = false;
+                    this.state = ESERState.ready;
+                }
+                this.extractProperties(res.properties)
+                .catch((error) => {
+                    this.logger.error("error", error);
+                });
+            })
+            .catch( (error) => {
+                this.logger.error("ERROR in setter of model ", error);
+        });
+    }
+
+    private checkIfTemplateExistsAsContent(template: string): boolean {
+        if(typeof(this.libraryContent)==="undefined") {
+            return true;
+        }
+        for (const library of this.libraryContent.dataCon) {
+            for (const content of library) {
+                if (content.value === template) {
+                    return true;
+                }
+            }
+        }
+        return false;
+    }
+
     private getUsername(): Promise<void> {
         return new Promise((resolve, reject) => {
             this.model.app.evaluateEx("=OSUser()")
@@ -413,6 +377,9 @@ class OnDemandController implements ng.IController {
 
     private setInterval(intervalTime: number): void {
         this.logger.debug("fcn: setInterfal");
+        if(typeof(intervalTime)==="undefined") {
+            intervalTime = 5000;
+        }
         this.interval = setInterval(() => {
             this.getStatus(this.taskId);
         }, intervalTime);
@@ -536,12 +503,12 @@ class OnDemandController implements ng.IController {
                 }
 
                 if (statusObject.status === -1) {
-                    this.state = SERState.serNoConnectionQlik;
+                    this.state = ESERState.serNoConnectionQlik;
                 }
 
                 this.logger.debug("set Task ID");
                 this.taskId = statusObject.taskId;
-                this.state = SERState.running;
+                this.state = ESERState.running;
 
                 this.clearInterval();
                 this.setInterval(this.intervalShort);
@@ -668,8 +635,8 @@ class OnDemandController implements ng.IController {
         });
     }
 
-    private setProperties (properties: IProperties): Promise<void> {
-        this.logger.debug("fcn: setProperties");
+    private extractProperties (properties: IProperties): Promise<void> {
+        this.logger.debug("fcn: extractProperties");
         return new Promise((resolve, reject) => {
             try {
                 this.properties.template = properties.template;
@@ -707,7 +674,7 @@ class OnDemandController implements ng.IController {
                 try {
                     if (response.indexOf("Error in expression")!==-1) {
                         this.logger.warn(response);
-                        this.state = SERState.serNotRunning;
+                        this.state = ESERState.serNotRunning;
                         return;
                     }
                 } catch (error) {
@@ -719,7 +686,7 @@ class OnDemandController implements ng.IController {
                     statusObject = JSON.parse(response);
                 } catch (error) {
                     this.logger.error("Error log from SER: ", response);
-                    this.state = SERState.error;
+                    this.state = ESERState.error;
                 }
 
                 if(typeof(statusObject.taskId)!=="undefined") {
@@ -730,33 +697,33 @@ class OnDemandController implements ng.IController {
 
                 switch (statusObject.status) {
                     case -2:
-                        this.state = SERState.serNoConnectionQlik;
+                        this.state = ESERState.serNoConnectionQlik;
                         break;
                     case -1:
-                        this.state = SERState.error;
+                        this.state = ESERState.error;
                         break;
                     case 0:
-                        this.state = SERState.ready;
+                        this.state = ESERState.ready;
                         this.logger.info("SER Status is ready");
                         break;
                    case 1:
-                        this.state = SERState.running;
+                        this.state = ESERState.running;
                         break;
                     case 2:
-                        this.state = SERState.running;
+                        this.state = ESERState.running;
                         break;
                     case 3:
                         this.link = `${this.host}${statusObject.link}`;
-                        this.state = SERState.finished;
+                        this.state = ESERState.finished;
                         break;
 
                     default:
-                        this.state = SERState.error;
+                        this.state = ESERState.error;
                         break;
                 }
             })
         .catch((error) => {
-            this.state = SERState.serNotRunning;
+            this.state = ESERState.serNotRunning;
             this.logger.error("ERROR", error);
         });
     }
@@ -776,7 +743,7 @@ class OnDemandController implements ng.IController {
             })
         .catch((error) => {
             this.logger.error("ERROR in abortRepot", error);
-            this.state = SERState.error;
+            this.state = ESERState.error;
         });
     }
     //#endregion
@@ -792,19 +759,19 @@ class OnDemandController implements ng.IController {
             return;
         }
         switch (this.state) {
-            case SERState.ready:
+            case ESERState.ready:
                 this.clicked = true;
                 this.running = true;
                 this.title = "Running ... (click to abort)";
                 this.start();
                 break;
-            case SERState.running:
+            case ESERState.running:
                 this.title = "Aborting ... ";
                 this.stopReport();
                 break;
-            case SERState.finished:
+            case ESERState.finished:
                 this.title = "Generate Report";
-                this.state = SERState.ready;
+                this.state = ESERState.ready;
                 window.open(this.link, "_blank");
                 this.stopReport();
                 break;
@@ -846,6 +813,7 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             scope: {},
             bindToController: {
                 model: "<",
+                libraryContent: "<",
                 theme: "<?",
                 editMode: "<?"
             },
