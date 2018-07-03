@@ -4,7 +4,6 @@ import * as qlik                        from "qlik";
 import * as template                    from "text!./ser-ext-ondemand.html";
 
 import { OnDemandDirectiveFactory }     from "./ser-ext-ondemandDirective";
-import { propertyHelper }               from "./lib/utils";
 
 import { ILibrary,
          ILayout,
@@ -14,7 +13,6 @@ import { utils,
          services,
          version }                      from "./node_modules/davinci.js/dist/umd/daVinci";
 import { resolve } from "path";
-import { isNull } from "util";
 //#endregion
 
 //#region registrate services
@@ -53,27 +51,23 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                let label: string;
-                                try {
-                                    label = data.properties.templateContentLibrary;
-                                } catch (error) {
-                                    label = "undefined";
-                                }
-                                if (typeof(data.properties)!=="undefined"
-                                        && typeof(data.properties.template)!=="undefined"
-                                        && typeof(data.properties.templateContentLibrary)==="number") {
-                                    label = data.properties.template.split("/")[1];
-                                }
-                                return propertyHelper<ILibrary[]>(
-                                    propertyScope,
-                                    "vm/content",
-                                    "",
-                                    50000,
-                                    [{
-                                        value: label,
-                                        label: label
-                                    }]
-                                );
+                                let counter = 0;
+                                return new Promise((resolve, reject) => {
+                                    (function waitForData(){
+                                        if (typeof(propertyScope.vm.content)!=="undefined") {
+                                            return resolve(propertyScope.vm.content);
+                                        }
+                                        if (counter > 500) {
+                                            // if data.properties.templateContentLibrary is number use split from template
+                                            return resolve([{
+                                                value: data.properties.templateContentLibrary,
+                                                label: data.properties.templateContentLibrary
+                                            }]);
+                                        }
+                                        counter++;
+                                        setTimeout(waitForData, 100);
+                                    })();
+                                });
                             }
                         },
                         templateContent: {
@@ -82,45 +76,50 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                let searchString: string;
-                                try {
-                                    if (typeof(data.properties.template)!=="undefined" && !isNull(data.properties.template)) {
-                                        searchString = decodeURI(data.properties.template.split("/")[3]);
-                                    } else {
-                                        searchString = data.properties.templateContentLibrary;
-                                    }
-                                } catch (error) {
-                                    searchString = "undefined";
-                                }
-                                let defaultRes: string = "HILFE";
-                                return propertyHelper<ILibrary[]>(
-                                    propertyScope,
-                                    "vm/content",
-                                    data.properties.templateContentLibrary,
-                                    50000,
-                                    [{
-                                        value: data.properties.template,
-                                        label: decodeURI(data.properties.template.split("/")[3])
-                                    }]
-                                );
-                                // return [{value: "1", lable: "1"}];
-                                // observeProperty(propertyScope.vm.content, 50000)
-                                // .then((res) => {
-                                //     for (const library of res) {
-                                //         if (library.value === data.properties.templateContentLibrary) {
-                                //             console.log("## library.content ##", library.content);
-                                //             return library.content;
-                                //         }
-                                //     }
-                                // })
-                                // .catch((error) => {
-                                //     console.log("WARN in definition of properties", error);
-                                //     let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
-                                //     return [{
-                                //         value: data.properties.template,
-                                //         label: defaultRes
-                                //     }];
+                                let counter = 0;
+                                return new Promise((resolve, reject) => {
+                                    (function waitForData(){
+                                        if (typeof(propertyScope.vm.content)!=="undefined") {
+                                            for (const library of propertyScope.vm.content) {
+                                                console.log("library.value", library.value);
+                                                console.log("data.properties.templateContentLibrary", data.properties.templateContentLibrary);
+                                                    if (library.value === data.properties.templateContentLibrary) {
+                                                        return resolve(library.content);
+                                                    }
+                                                    counter++;
+                                                }
+                                        }
+                                        if (counter>500) {
+                                            let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
+                                            return resolve([{
+                                                value: data.properties.template,
+                                                label: defaultRes
+                                            }]);
+                                        }
+                                        counter++;
+                                        setTimeout(waitForData, 100);
+                                    })();
+                                });
+                                // new Promise(()=>{
+                                //     while(propertyScope.vm != null& propertyScope.vm.content != null)
+                                //       wait()
+                                //     if okay -.> resolve(propertyScope.vm,conten)
+                                //     if timeout return default value
+                                // }).then(()=>{
+                                //     return [];
                                 // });
+
+                                // if (typeof(propertyScope.vm.content)!=="undefined") {
+                                //     let counter = 0;
+                                //     // for (const library of scope2.vm.content.dataLib) {
+                                //     //     if (library.value === data.properties.templateContentLibrary) {
+                                //     //         return scope2.vm.content.dataCon[counter];
+                                //     //     }
+                                //     //     counter++;
+                                //     // }
+                                // }
+                                // let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
+                                // return [{value: data.properties.template, label: defaultRes}];
                             },
                             show: function (data: any) {
                                 if (data.properties.templateContentLibrary!==null) {
