@@ -18,7 +18,7 @@ import { IProperties,
          ISERResponseStatus,
          IGenericBookmarkExtended,
          ISERRequestStatus,
-         IPropertyContent,
+         ILibrary,
          IGenericBookmarkLayoutMetaExtended,
          INxAppPropertiesExtended }     from "./lib/interfaces";
 import { ESERState,
@@ -213,11 +213,11 @@ class OnDemandController implements ng.IController {
     //#endregion
 
     //#region libraryContent
-    private _libraryContent : IPropertyContent;
-    public get libraryContent() : IPropertyContent {
+    private _libraryContent : ILibrary[];
+    public get libraryContent() : ILibrary[] {
         return this._libraryContent;
     }
-    public set libraryContent(v : IPropertyContent) {
+    public set libraryContent(v : ILibrary[]) {
         if (v !== this._libraryContent && typeof(v)!=="undefined") {
             this._libraryContent = v;
         }
@@ -292,9 +292,9 @@ class OnDemandController implements ng.IController {
         if(typeof(this.libraryContent)==="undefined") {
             return true;
         }
-        for (const library of this.libraryContent.dataCon) {
-            for (const content of library) {
-                if (content.value === template) {
+        for (const library of this.libraryContent) {
+            for (const item of library.content) {
+                if (item.value === template) {
                     return true;
                 }
             }
