@@ -1,25 +1,17 @@
-import { IDataLabel } from "./interfaces";
-
-export function waitOnDefined<T>(property: Object, path: string, time?: number): Promise<T> {
+export function waitOnDefined<T>(property: Object, path: string, time: number): Promise<T> {
 
     return new Promise((resolve, reject) => {
         let counter = 0;
         let timeout = 100;
 
         (function waitForData() {
-            console.log("waitForData");
-
             try {
-                console.log("Found in wait");
-                return resolve(getProperty<T>(property, path));
+                resolve(getProperty<T>(property, path));
             } catch (error) {
-                console.log("not Found in wait");
-
                 if (typeof(time)!=="undefined" && counter>time/timeout) {
                     let error = new Error("Property not set in time");
-                    return reject(error);
+                    reject(error);
                 }
-
                 counter++;
                 setTimeout(waitForData, timeout);
             }
@@ -28,31 +20,14 @@ export function waitOnDefined<T>(property: Object, path: string, time?: number):
     });
 }
 
+export function propertyHelperLibaries<T>(scope: Object, path: string, time: number, defaultReturn?: T): Promise<T> | T {
 
-export function propertyHelper<T>(scope: Object, path: string, searchString?: string, time?: number, defaultReturn?: T): Promise<T> | T {
-
-    let result: T;
     try {
-        console.log("Found global");
-        result = getProperty<T>(scope, path);
-    } catch (error) {
-        return waitOnDefined<T>(scope, path, time)
-        .then((res) => {
-            if (typeof(searchString)==="undefined" || searchString==="") {
-                return res;
-            }
-            try {
-                for (const library of res as any) {
-                    if (library.value === searchString) {
-                        console.log("## library.content ##", library.content);
-                        return library.content;
-                    }
-                }
-            } catch (error) {
-                return res;
-            }
 
-        })
+        return getProperty<T>(scope, path);
+    } catch (error) {
+
+        return waitOnDefined<T>(scope, path, time)
         .catch((error) => {
             if (typeof(defaultReturn)!=="undefined") {
                 return defaultReturn;
@@ -60,9 +35,39 @@ export function propertyHelper<T>(scope: Object, path: string, searchString?: st
             throw error;
         });
     }
+}
 
-    if (typeof(result)!=="undefined") {
-        return result;
+export function propertyHelperContent<T>(
+    scope: Object, path: string, searchString: string, time: number, defaultReturn?: T): Promise<T> | T {
+
+    let result: T;
+    try {
+
+        result = getProperty<T>(scope, path);
+        return getContentByLibaryName(result, searchString);
+
+    } catch (error) {
+
+        return new Promise((resolve, reject) => {
+            waitOnDefined<T>(scope, path, time)
+            .then((res) => {
+                return resolve(getContentByLibaryName(res, searchString));
+            })
+            .catch((error) => {
+                if (typeof(defaultReturn)!=="undefined") {
+                    return defaultReturn;
+                }
+                throw error;
+            });
+        });
+    }
+}
+
+function getContentByLibaryName(result:any, searchString: string) {
+    for (const library of result as any) {
+        if (library.value === searchString) {
+            return library.content;
+        }
     }
 }
 

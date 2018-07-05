@@ -4,6 +4,7 @@ import * as qlik                        from "qlik";
 import * as template                    from "text!./ser-ext-ondemand.html";
 
 import { OnDemandDirectiveFactory }     from "./ser-ext-ondemandDirective";
+import { propertyHelperLibaries, propertyHelperContent }               from "./lib/utils";
 
 import { ILibrary,
          ILayout,
@@ -13,6 +14,7 @@ import { utils,
          services,
          version }                      from "./node_modules/davinci.js/dist/umd/daVinci";
 import { resolve } from "path";
+import { isNull } from "util";
 //#endregion
 
 //#region registrate services
@@ -51,23 +53,31 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                let counter = 0;
-                                return new Promise((resolve, reject) => {
-                                    (function waitForData(){
-                                        if (typeof(propertyScope.vm.content)!=="undefined") {
-                                            return resolve(propertyScope.vm.content);
-                                        }
-                                        if (counter > 500) {
-                                            // if data.properties.templateContentLibrary is number use split from template
-                                            return resolve([{
-                                                value: data.properties.templateContentLibrary,
-                                                label: data.properties.templateContentLibrary
-                                            }]);
-                                        }
-                                        counter++;
-                                        setTimeout(waitForData, 100);
-                                    })();
-                                });
+                                let label: string = null;
+                                if (typeof(data.properties.templateContentLibrary)!=="undefined"
+                                        && !isNull(data.properties.templateContentLibrary)) {
+                                    label = data.properties.templateContentLibrary;
+                                }
+
+                                if((typeof(label)==="number" || isNull(label))
+                                        && typeof(data.properties.template)!=="undefined"
+                                        && !isNull(data.properties.template)) {
+                                    label = data.properties.template.split("/")[2];
+                                }
+
+                                if (isNull(label)) {
+                                    label = "could not load content Libraries";
+                                }
+
+                                return propertyHelperLibaries<ILibrary[]>(
+                                    propertyScope,
+                                    "vm/content",
+                                    50000,
+                                    [{
+                                        value: label,
+                                        label: label
+                                    }]
+                                );
                             }
                         },
                         templateContent: {
@@ -76,53 +86,39 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                let counter = 0;
-                                return new Promise((resolve, reject) => {
-                                    (function waitForData(){
-                                        if (typeof(propertyScope.vm.content)!=="undefined") {
-                                            for (const library of propertyScope.vm.content) {
-                                                console.log("library.value", library.value);
-                                                console.log("data.properties.templateContentLibrary", data.properties.templateContentLibrary);
-                                                    if (library.value === data.properties.templateContentLibrary) {
-                                                        return resolve(library.content);
-                                                    }
-                                                    counter++;
-                                                }
-                                        }
-                                        if (counter>500) {
-                                            let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
-                                            return resolve([{
-                                                value: data.properties.template,
-                                                label: defaultRes
-                                            }]);
-                                        }
-                                        counter++;
-                                        setTimeout(waitForData, 100);
-                                    })();
-                                });
-                                // new Promise(()=>{
-                                //     while(propertyScope.vm != null& propertyScope.vm.content != null)
-                                //       wait()
-                                //     if okay -.> resolve(propertyScope.vm,conten)
-                                //     if timeout return default value
-                                // }).then(()=>{
-                                //     return [];
-                                // });
+                                let defaultLabel: string = null;
+                                let defaultValue: string = null;
 
-                                // if (typeof(propertyScope.vm.content)!=="undefined") {
-                                //     let counter = 0;
-                                //     // for (const library of scope2.vm.content.dataLib) {
-                                //     //     if (library.value === data.properties.templateContentLibrary) {
-                                //     //         return scope2.vm.content.dataCon[counter];
-                                //     //     }
-                                //     //     counter++;
-                                //     // }
-                                // }
-                                // let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
-                                // return [{value: data.properties.template, label: defaultRes}];
+                                // default, should not apeare
+                                if (isNull(data.properties.templateContentLibrary)
+                                        || typeof(data.properties.templateContentLibrary)==="undefined") {
+                                    return [{
+                                        value: "defaultValue",
+                                        label: "defaultLable"
+                                    }];
+                                }
+
+                                if (!isNull(data.properties.template)
+                                        && typeof(data.properties.template)!=="undefined") {
+                                    defaultValue = data.properties.template,
+                                    defaultLabel = data.properties.template.split("/")[3];
+                                }
+
+                                return propertyHelperContent<ILibrary[]>(
+                                    propertyScope,
+                                    "vm/content",
+                                    data.properties.templateContentLibrary,
+                                    50000,
+                                    [{
+                                        value: defaultValue,
+                                        label: defaultLabel
+                                    }]
+                                );
+
                             },
                             show: function (data: any) {
-                                if (data.properties.templateContentLibrary!==null) {
+                                if (!isNull(data.properties.templateContentLibrary)
+                                    && typeof(data.properties.templateContentLibrary)!=="undefined") {
                                     return true;
                                 }
                                 return false;
@@ -306,7 +302,6 @@ class OnDemandExtension {
                 Promise.all(promAllContent)
                 .then((res) => {
 
-                    setTimeout(() => {
                     for (const contentLib of res) {
                         let items: EngineAPI.IStaticContentListItem[] = (contentLib as any);
 
@@ -330,7 +325,6 @@ class OnDemandExtension {
                     }
                     resolve(returnVal);
 
-                }, 3000);
                 })
                 .catch((error) => {
                     console.error("ERROR", error);
