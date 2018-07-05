@@ -11,7 +11,7 @@
   "devDependencies": {
     "@types/angular": "1.6.48",
     "@types/jquery": "1.10.34",
-    "@types/qlik-engineapi": "12.67.0",
+    "@types/qlik-engineapi": "12.67.2",
     "@types/qlik-visualizationextensions": "4.0.2",
     "@types/node-uuid": "0.0.28",
     "autoprefixer": "8.3.0",
