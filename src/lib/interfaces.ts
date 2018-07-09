@@ -1,8 +1,10 @@
 //#region imports
+import { logging }                      from "../node_modules/davinci.js/dist/umd/daVinci";
+
 import { ISerConfig,
-         ISerReport}                  from "../node_modules/ser.api/index";
+         ISerReport}                    from "../node_modules/ser.api/index";
 import { EVersionOption,
-         ETaskOption } from "./enums";
+         ETaskOption }                  from "./enums";
 //#endregion
 
 export interface ISERRequestStart extends ISerConfig {
@@ -46,11 +48,16 @@ export interface ISERHub {
     connections: string;
 }
 
+export interface ILayout {
+    properties: IProperties;
+}
+
 export interface IProperties {
     template: string;
     output: string;
     selection: number;
     directDownload: boolean;
+    loglevel?: logging.LogLevel;
 }
 
 export interface INxAppPropertiesExtended extends EngineAPI.INxAppProperties {
@@ -68,12 +75,13 @@ export interface IGenericBookmarkExtended extends EngineAPI.IGenericBookmark {
     id: string;
 }
 
+
+
 export interface IDataLabel {
     label: string;
     value: string | number;
 }
 
-export interface IPropertyContent {
-    dataLib: IDataLabel[];
-    dataCon: IDataLabel[][];
+export interface ILibrary extends IDataLabel {
+    content?: IDataLabel[];
 }

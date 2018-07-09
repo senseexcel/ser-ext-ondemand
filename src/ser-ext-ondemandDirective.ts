@@ -10,6 +10,8 @@ import { utils,
          directives }                   from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral,
          ISerConnection,
+         SelectionMode,
+         SelectionType,
          ISerTemplate}                  from "./node_modules/ser.api/index";
 import { IProperties,
          ISERRequestStart,
@@ -18,13 +20,11 @@ import { IProperties,
          ISERResponseStatus,
          IGenericBookmarkExtended,
          ISERRequestStatus,
-         IPropertyContent,
+         ILibrary,
          IGenericBookmarkLayoutMetaExtended,
          INxAppPropertiesExtended }     from "./lib/interfaces";
 import { ESERState,
-         EVersionOption,
-         SelectionType,
-         SelectionMode }                from "./lib/enums";
+         EVersionOption }                from "./lib/enums";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -213,11 +213,11 @@ class OnDemandController implements ng.IController {
     //#endregion
 
     //#region libraryContent
-    private _libraryContent : IPropertyContent;
-    public get libraryContent() : IPropertyContent {
+    private _libraryContent : ILibrary[];
+    public get libraryContent() : ILibrary[] {
         return this._libraryContent;
     }
-    public set libraryContent(v : IPropertyContent) {
+    public set libraryContent(v : ILibrary[]) {
         if (v !== this._libraryContent && typeof(v)!=="undefined") {
             this._libraryContent = v;
         }
@@ -292,9 +292,9 @@ class OnDemandController implements ng.IController {
         if(typeof(this.libraryContent)==="undefined") {
             return true;
         }
-        for (const library of this.libraryContent.dataCon) {
-            for (const content of library) {
-                if (content.value === template) {
+        for (const library of this.libraryContent) {
+            for (const item of library.content) {
+                if (item.value === template) {
                     return true;
                 }
             }

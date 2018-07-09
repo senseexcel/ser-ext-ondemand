@@ -4,13 +4,17 @@ import * as qlik                        from "qlik";
 import * as template                    from "text!./ser-ext-ondemand.html";
 
 import { OnDemandDirectiveFactory }     from "./ser-ext-ondemandDirective";
+import { propertyHelperLibaries, propertyHelperContent }               from "./lib/utils";
 
-import { IPropertyContent,
+import { ILibrary,
+         ILayout,
          IDataLabel }                   from "./lib/interfaces";
 import { utils,
          logging,
          services,
          version }                      from "./node_modules/davinci.js/dist/umd/daVinci";
+import { resolve } from "path";
+import { isNull } from "util";
 //#endregion
 
 //#region registrate services
@@ -24,7 +28,11 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFac
     "OndemandExtension");
 //#endregion
 
-let scope2 : utils.IVMScope<OnDemandExtension>;
+interface IVMScopeExtended extends utils.IVMScope<OnDemandExtension> {
+    layout: ILayout;
+}
+
+let propertyScope : utils.IVMScope<OnDemandExtension>;
 
 //#region extension properties
 let parameter = {
@@ -45,10 +53,31 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                if (typeof(scope2.vm.content)!=="undefined") {
-                                    return scope2.vm.content.dataLib;
+                                let label: string = null;
+                                if (typeof(data.properties.templateContentLibrary)!=="undefined"
+                                        && !isNull(data.properties.templateContentLibrary)) {
+                                    label = data.properties.templateContentLibrary;
                                 }
-                                return [{value: data.properties.templateContentLibrary, label: data.properties.templateContentLibrary}];
+
+                                if((typeof(label)==="number" || isNull(label))
+                                        && typeof(data.properties.template)!=="undefined"
+                                        && !isNull(data.properties.template)) {
+                                    label = data.properties.template.split("/")[2];
+                                }
+
+                                if (isNull(label)) {
+                                    label = "could not load content Libraries";
+                                }
+
+                                return propertyHelperLibaries<ILibrary[]>(
+                                    propertyScope,
+                                    "vm/content",
+                                    50000,
+                                    [{
+                                        value: label,
+                                        label: label
+                                    }]
+                                );
                             }
                         },
                         templateContent: {
@@ -57,20 +86,39 @@ let parameter = {
                             component: "dropdown",
                             options: function(data: any)
                             {
-                                if (typeof(scope2.vm.content)!=="undefined") {
-                                    let counter = 0;
-                                    for (const library of scope2.vm.content.dataLib) {
-                                        if (library.value === data.properties.templateContentLibrary) {
-                                            return scope2.vm.content.dataCon[counter];
-                                        }
-                                        counter++;
-                                    }
+                                let defaultLabel: string = null;
+                                let defaultValue: string = null;
+
+                                // default, should not apeare
+                                if (isNull(data.properties.templateContentLibrary)
+                                        || typeof(data.properties.templateContentLibrary)==="undefined") {
+                                    return [{
+                                        value: "defaultValue",
+                                        label: "defaultLable"
+                                    }];
                                 }
-                                let defaultRes: string = decodeURI(data.properties.template.split("/")[3]);
-                                return [{value: data.properties.template, label: defaultRes}];
+
+                                if (!isNull(data.properties.template)
+                                        && typeof(data.properties.template)!=="undefined") {
+                                    defaultValue = data.properties.template,
+                                    defaultLabel = data.properties.template.split("/")[3];
+                                }
+
+                                return propertyHelperContent<ILibrary[]>(
+                                    propertyScope,
+                                    "vm/content",
+                                    data.properties.templateContentLibrary,
+                                    50000,
+                                    [{
+                                        value: defaultValue,
+                                        label: defaultLabel
+                                    }]
+                                );
+
                             },
                             show: function (data: any) {
-                                if (data.properties.templateContentLibrary!==null) {
+                                if (!isNull(data.properties.templateContentLibrary)
+                                    && typeof(data.properties.templateContentLibrary)!=="undefined") {
                                     return true;
                                 }
                                 return false;
@@ -159,7 +207,7 @@ class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
     scope: any;
-    content : IPropertyContent;
+    content : ILibrary[];
 
     //#region logger
     private _logger: logging.Logger;
@@ -221,49 +269,67 @@ class OnDemandExtension {
         }
     }
 
-    private  getPropertyContent(app: EngineAPI.IApp): Promise<IPropertyContent> {
+    private  getPropertyContent(app: EngineAPI.IApp): Promise<ILibrary[]> {
         return new Promise((resolve, reject) => {
+
             app.getContentLibraries()
             .then((res: any) => {
                 let list: Array<EngineAPI.IContentLibraryListItem> = res;
-                let returnVal: IDataLabel[] = [];
-                let returnValContent: IDataLabel[][] = [];
-                let index: number = 0;
+
+                let returnVal: ILibrary[] = [];
+                let promAllContent: Promise<EngineAPI.IStaticContentList>[] = [];
+
+
                 for (const item of list) {
                     let inApp: boolean = false;
                     if (item.qAppSpecific === true) {
                         inApp = true;
                     }
-                    returnVal.push({
-                        value: item.qAppSpecific===true?"in App":item.qName,
-                        label: item.qAppSpecific===true?"in App":item.qName
-                    });
-                    index++;
-                    let items = [];
-                    app.getLibraryContent(item.qName)
-                    .then((content: any) => {
-                        for (const value of content) {
+
+                    let label: string = item.qAppSpecific===true?"in App":item.qName;
+
+                    let lib: ILibrary = {
+                        label: label,
+                        value: label,
+                        content: []
+                    };
+                    returnVal.push(lib);
+                    promAllContent.push(app.getLibraryContent(item.qName));
+                }
+
+
+                let counter = 0;
+                Promise.all(promAllContent)
+                .then((res) => {
+
+                    for (const contentLib of res) {
+                        let items: EngineAPI.IStaticContentListItem[] = (contentLib as any);
+
+                        for (const value of items) {
                             let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
                             let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
+
                             if (last4 === ".xls" || last5 === ".xlsx") {
                                 let lib = (value.qUrl as string).split("/")[2];
                                 let name = (value.qUrl as string).split("/")[3];
-                                items.push({
-                                    value: `content://${inApp===true?"":lib}/${name}`,
+
+
+
+                                returnVal[counter].content.push({
+                                    value: `content://${returnVal[counter].label==="in App"?"":lib}/${name}`,
                                     label: decodeURI(name)
                                 });
                             }
                         }
-                    })
-                    .catch((error) => {
-                        console.error("ERROR", error);
-                    });
-                    returnValContent.push(items);
-                }
-                resolve({
-                    dataLib: returnVal,
-                    dataCon: returnValContent
+                        counter ++;
+                    }
+                    resolve(returnVal);
+
+                })
+                .catch((error) => {
+                    console.error("ERROR", error);
                 });
+
             })
             .catch((error) => {
                 reject(error);
@@ -283,14 +349,14 @@ export = {
     resize: () => {
         //
     },
-    controller: ["$scope", function (scope: utils.IVMScope<OnDemandExtension>) {
+    controller: ["$scope", function (scope: IVMScopeExtended) {
 
         //#region Logger
-        logging.LogConfig.SetLogLevel("*", (scope as any).layout.properties.loglevel);
+        logging.LogConfig.SetLogLevel("*", scope.layout.properties.loglevel);
         let logger = new logging.Logger("Main");
         //#endregion
 
-        scope2 = scope as any;
+        propertyScope = scope;
         scope.vm = new OnDemandExtension(scope);
     }]
 };
