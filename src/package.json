@@ -29,7 +29,7 @@
     "precss": "3.1.2",
     "raw-loader": "0.5.1",
     "ser.api": "3.1.6",
-    "style-loader": "0.21.0",
+    "style-loader": "0.22.0",
     "ts-loader": "4.4.2",
     "typescript": "3.0.1",
     "url-loader": "1.0.1",
