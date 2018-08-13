@@ -39,7 +39,7 @@
     "zip-webpack-plugin": "3.0.0"
   },
   "dependencies": {
-    "davinci.js": "1.4.0",
+    "davinci.js": "1.4.4",
     "node-uuid": "1.4.8"
   },
   "scripts": {
