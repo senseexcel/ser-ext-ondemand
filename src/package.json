@@ -30,7 +30,7 @@
     "raw-loader": "0.5.1",
     "ser.api": "3.1.6",
     "style-loader": "0.22.1",
-    "ts-loader": "4.4.2",
+    "ts-loader": "4.5.0",
     "typescript": "3.0.1",
     "url-loader": "1.1.1",
     "webpack": "4.16.5",
