@@ -32,7 +32,7 @@
     "style-loader": "0.22.1",
     "ts-loader": "4.4.2",
     "typescript": "3.0.1",
-    "url-loader": "1.1.0",
+    "url-loader": "1.1.1",
     "webpack": "4.16.5",
     "webpack-cli": "3.1.0",
     "webpack-deploy-after-build": "1.0.5",
