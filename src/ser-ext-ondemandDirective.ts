@@ -10,6 +10,8 @@ import { utils,
          directives }                   from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral,
          ISerConnection,
+         SelectionMode,
+         SelectionType,
          ISerTemplate}                  from "./node_modules/ser.api/index";
 import { IProperties,
          ISERRequestStart,
@@ -22,9 +24,7 @@ import { IProperties,
          IGenericBookmarkLayoutMetaExtended,
          INxAppPropertiesExtended }     from "./lib/interfaces";
 import { ESERState,
-         EVersionOption,
-         SelectionType,
-         SelectionMode }                from "./lib/enums";
+         EVersionOption }                from "./lib/enums";
 //#endregion
 
 class OnDemandController implements ng.IController {
