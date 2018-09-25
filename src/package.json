@@ -28,7 +28,7 @@
     "postcss-loader": "3.0.0",
     "precss": "3.1.2",
     "raw-loader": "0.5.1",
-    "ser.api": "3.2.0",
+    "ser.api": "3.2.1",
     "style-loader": "0.23.0",
     "ts-loader": "5.2.0",
     "typescript": "3.0.3",
@@ -41,7 +41,7 @@
   "dependencies": {
     "davinci.js": "1.4.5",
     "node-uuid": "1.4.8",
-    "ser.api": "3.1.7"
+    "ser.api": "3.2.1"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && gulp less",
