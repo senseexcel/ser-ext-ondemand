@@ -16,7 +16,7 @@
     "@types/node-uuid": "0.0.28",
     "autoprefixer": "9.2.0",
     "clean-webpack-plugin": "0.1.19",
-    "copy-webpack-plugin": "4.5.3",
+    "copy-webpack-plugin": "4.5.4",
     "cross-env": "5.2.0",
     "css-loader": "1.0.0",
     "gulp": "3.9.1",
