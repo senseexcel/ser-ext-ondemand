@@ -27,6 +27,10 @@ import { ESERState,
          EVersionOption }                from "./lib/enums";
 //#endregion
 
+interface ISerConnectionAssist extends ISerConnection {
+    identities?: string[];
+}
+
 class OnDemandController implements ng.IController {
 
     //#region variables
@@ -395,7 +399,7 @@ class OnDemandController implements ng.IController {
         let general: ISerGeneral = {
             useUserSelections: SelectionMode.OnDemandOn
         };
-        let connection: ISerConnection;
+        let connection: ISerConnectionAssist;
         let template: ISerTemplate = {
             input: this.properties.template,
             output: "OnDemand",
@@ -406,15 +410,14 @@ class OnDemandController implements ng.IController {
             case 0:
                 connection = {
                     app: this.appId,
-                    sharedSession: true
+                    identities: [""]
                 };
                 general.useUserSelections = SelectionMode.OnDemandOn;
                 break;
 
             case 1:
                 connection = {
-                    app: this.appId,
-                    sharedSession: false
+                    app: this.appId
                 };
                 general.useUserSelections = SelectionMode.OnDemandOff;
                 template = {
@@ -432,8 +435,7 @@ class OnDemandController implements ng.IController {
             default:
                 general.useUserSelections = SelectionMode.Normal;
                 connection = {
-                    app: this.appId,
-                    sharedSession: false
+                    app: this.appId
                 };
                 break;
         }
