@@ -142,10 +142,10 @@ let parameter = {
                             label: "Selection Mode",
                             component: "dropdown",
                             options: [
-                            // {
-                            //     value: 0,
-                            //     label: "Selection over shared session"
-                            // },
+                            {
+                                value: 0,
+                                label: "Selection over shared session"
+                            },
                             {
                                 value: 1,
                                 label: "Selection over bookmark"
