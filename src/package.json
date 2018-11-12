@@ -15,7 +15,7 @@
     "@types/qlik-visualizationextensions": "4.0.2",
     "@types/node-uuid": "0.0.28",
     "autoprefixer": "9.3.1",
-    "clean-webpack-plugin": "0.1.19",
+    "clean-webpack-plugin": "1.0.0",
     "copy-webpack-plugin": "4.6.0",
     "cross-env": "5.2.0",
     "css-loader": "1.0.1",
