@@ -40,7 +40,7 @@
   "dependencies": {
     "davinci.js": "1.4.5",
     "node-uuid": "1.4.8",
-    "ser.api": "3.3.0"
+    "ser.api": "3.4.0"
   },
   "scripts": {
     "build": "tsc -p tsconfig.json && gulp less",
