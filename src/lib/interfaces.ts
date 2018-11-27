@@ -8,7 +8,6 @@ import { EVersionOption,
 //#endregion
 
 export interface ISERRequestStart extends ISerConfig {
-    onDemand: boolean;
 }
 
 export interface ISerReportExtended extends ISerReport {
@@ -28,9 +27,20 @@ export interface ISERResponseStatusVersion {
 export interface ISERResponseStatus {
     status: number;
     log: string;
-    link: string;
     taskId: string;
     versions: ISERResponseStatusVersion[];
+    distribute: string
+}
+
+export interface IDistribute {
+    hubResults: IHubResult[];
+}
+
+export interface IHubResult {
+    link: string;
+    success: boolean;
+    message: string;
+    reportName: string;
 }
 
 export interface ISERRequestStatus {
