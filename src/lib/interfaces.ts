@@ -29,7 +29,7 @@ export interface ISERResponseStatus {
     log: string;
     taskId: string;
     versions: ISERResponseStatusVersion[];
-    distribute: IDistribute
+    distribute: string
 }
 
 export interface IDistribute {

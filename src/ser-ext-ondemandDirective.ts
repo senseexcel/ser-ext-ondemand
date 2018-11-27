@@ -26,7 +26,8 @@ import {
     ISERRequestStatus,
     ILibrary,
     IGenericBookmarkLayoutMetaExtended,
-    INxAppPropertiesExtended
+    INxAppPropertiesExtended,
+    IDistribute
 } from "./lib/interfaces";
 import {
     ESERState,
@@ -714,9 +715,10 @@ class OnDemandController implements ng.IController {
                         this.state = ESERState.running;
                         break;
                     case 3:
-                        // todo check link
 
-                        for (const hubResult of statusObject.distribute.hubResults) {
+                        let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
+
+                        for (const hubResult of distributeObject.hubResults) {
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
                             }
