@@ -264,7 +264,11 @@ class OnDemandExtension {
 
     }
 
-    public isEditMode() {
+    /**
+     * checks if client is in edit or in analyse mode
+     * @returns boolean, return true if client is in edit mode
+     */
+    public isEditMode(): boolean {
         if (qlik.navigation.getMode() === "analysis") {
             this.mode = false;
             return false;
@@ -334,10 +338,10 @@ export = {
     initialProperties: {},
     template: template,
     paint: () => {
-        //
+        // empty function to avoid braking when paint method is required
     },
     resize: () => {
-        //
+        // empty function to avoid braking when resize method is required
     },
     controller: ["$scope", function (scope: IVMScopeExtended) {
 
