@@ -49,7 +49,7 @@ class OnDemandController implements ng.IController {
     private appPublished: boolean;
     private bookmarkName: string = "serBookmarkOnDemand";
     private host: string;
-    private interval: NodeJS.Timer;
+    private interval: number;
     private intervalShort: number = 3000;
     private intervalLong: number = 6000;
     private links: string[];
@@ -381,7 +381,7 @@ class OnDemandController implements ng.IController {
         if (typeof (intervalTime) === "undefined") {
             intervalTime = 5000;
         }
-        this.interval = setInterval(() => {
+        this.interval = window.setInterval(() => {
             this.getStatus(this.taskId);
         }, intervalTime);
     }
@@ -412,7 +412,8 @@ class OnDemandController implements ng.IController {
 
             case 1:
                 connection = {
-                    app: this.appId
+                    app: this.appId,
+                    identities: ["1234567"]
                 };
                 template = {
                     input: this.properties.template,

@@ -12,9 +12,11 @@
     "@types/angular": "1.6.51",
     "@types/jquery": "3.3.24",
     "@types/node-uuid": "0.0.28",
+    "@types/node": "10.12.14",
     "@types/qlik-engineapi": "12.67.6",
     "@types/qlik-visualizationextensions": "4.0.2",
-    "q2g-build": "file:../../../Framework/q2g-build/src"
+    "q2g-build": "file:../../../Framework/q2g-build/src",
+    "typescript": "3.2.2"
   },
   "dependencies": {
     "davinci.js": "1.4.5",
@@ -26,13 +28,13 @@
     "q2g-build:prod": "node node_modules/q2g-build --builder extension --env production --config q2g-build.webpack.json"
   },
   "qext": {
-      "name": "ser - On Demand Sense Report",
-      "icon": "filterpane",
-      "keywords": "qlik-sense, visualization",
-      "dependencies": {
-          "qlik-sense": ">=3.2.x"
-      },
-      "id": "ser-ext-ondemand",
-      "type": "visualization"
+    "name": "ser - On Demand Sense Report",
+    "icon": "filterpane",
+    "keywords": "qlik-sense, visualization",
+    "dependencies": {
+      "qlik-sense": ">=3.2.x"
+    },
+    "id": "ser-ext-ondemand",
+    "type": "visualization"
   }
 }
