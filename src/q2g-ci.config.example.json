@@ -1,7 +1,7 @@
 {
     "qrs": [
         {
-            "host": "{hostname}"
+            "host": "{host}"
         }
     ],
     "desktop": true
