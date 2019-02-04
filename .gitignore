@@ -4,6 +4,7 @@
 *.css
 dist/*.d.ts
 package-lock.json
+q2g-ci.config.json
 
 ## Typescript q2g Folders
 node_modules/
