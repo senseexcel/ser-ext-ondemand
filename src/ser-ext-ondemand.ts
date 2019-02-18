@@ -5,19 +5,8 @@ import * as template from "text!./ser-ext-ondemand.html";
 
 import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
-
-import {
-    ILibrary,
-    ILayout,
-    IDataLabel
-} from "./lib/interfaces";
-import {
-    utils,
-    logging,
-    services,
-    version
-} from "./node_modules/davinci.js/dist/umd/daVinci";
-import { resolve } from "path";
+import { ILibrary, ILayout } from "./lib/interfaces";
+import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { isNull } from "util";
 //#endregion
 
@@ -38,8 +27,7 @@ interface IVMScopeExtended extends utils.IVMScope<OnDemandExtension> {
 
 let propertyScope: utils.IVMScope<OnDemandExtension>;
 
-//#region extension properties
-let parameter = {
+let properties = {
     type: "items",
     component: "accordion",
     items: {
@@ -91,7 +79,6 @@ let parameter = {
                                 let defaultLabel: string = null;
                                 let defaultValue: string = null;
 
-                                // default, should not apeare
                                 if (isNull(data.properties.templateContentLibrary)
                                     || typeof (data.properties.templateContentLibrary) === "undefined") {
                                     return [{
@@ -206,7 +193,6 @@ let parameter = {
         }
     }
 };
-//#endregion
 
 class OnDemandExtension {
 
@@ -333,8 +319,10 @@ class OnDemandExtension {
     }
 }
 
+
+
 export = {
-    definition: parameter,
+    definition: properties,
     initialProperties: {},
     template: template,
     paint: () => {

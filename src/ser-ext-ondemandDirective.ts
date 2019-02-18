@@ -244,7 +244,6 @@ class OnDemandController implements ng.IController {
             if (typeof (this.modelOnChangedFunction) === "function") {
                 (this.model as any).removeListener("changed", this.modelOnChangedFunction);
             }
-            // this.model.
         } catch {
             this.logger.debug("could not clear interval onDestroy");
         }
@@ -712,6 +711,7 @@ class OnDemandController implements ng.IController {
 
                         let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
 
+                        this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
