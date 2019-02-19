@@ -1,25 +1,18 @@
 //#region Imports
-import * as qvangular                   from "qvangular";
-import * as qlik                        from "qlik";
-import * as template                    from "text!./ser-ext-ondemand.html";
+import * as qvangular from "qvangular";
+import * as qlik from "qlik";
+import * as template from "text!./ser-ext-ondemand.html";
 
-import { OnDemandDirectiveFactory }     from "./ser-ext-ondemandDirective";
-import { propertyHelperLibaries, propertyHelperContent }               from "./lib/utils";
-
-import { ILibrary,
-         ILayout,
-         IDataLabel }                   from "./lib/interfaces";
-import { utils,
-         logging,
-         services,
-         version }                      from "./node_modules/davinci.js/dist/umd/daVinci";
-import { resolve } from "path";
+import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
+import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
+import { ILibrary, ILayout } from "./lib/interfaces";
+import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { isNull } from "util";
 //#endregion
 
 //#region registrate services
 qvangular.service<services.IRegistrationProvider>("$registrationProvider", services.RegistrationProvider)
-.implementObject(qvangular);
+    .implementObject(qvangular);
 //#endregion
 
 //#region Directives
@@ -32,10 +25,9 @@ interface IVMScopeExtended extends utils.IVMScope<OnDemandExtension> {
     layout: ILayout;
 }
 
-let propertyScope : utils.IVMScope<OnDemandExtension>;
+let propertyScope: utils.IVMScope<OnDemandExtension>;
 
-//#region extension properties
-let parameter = {
+let properties = {
     type: "items",
     component: "accordion",
     items: {
@@ -51,17 +43,16 @@ let parameter = {
                             ref: "properties.templateContentLibrary",
                             label: "Library",
                             component: "dropdown",
-                            options: function(data: any)
-                            {
+                            options: function (data: any) {
                                 let label: string = null;
-                                if (typeof(data.properties.templateContentLibrary)!=="undefined"
-                                        && !isNull(data.properties.templateContentLibrary)) {
+                                if (typeof (data.properties.templateContentLibrary) !== "undefined"
+                                    && !isNull(data.properties.templateContentLibrary)) {
                                     label = data.properties.templateContentLibrary;
                                 }
 
-                                if((typeof(label)==="number" || isNull(label))
-                                        && typeof(data.properties.template)!=="undefined"
-                                        && !isNull(data.properties.template)) {
+                                if ((typeof (label) === "number" || isNull(label))
+                                    && typeof (data.properties.template) !== "undefined"
+                                    && !isNull(data.properties.template)) {
                                     label = data.properties.template.split("/")[2];
                                 }
 
@@ -84,14 +75,12 @@ let parameter = {
                             ref: "properties.template",
                             label: "Content",
                             component: "dropdown",
-                            options: function(data: any)
-                            {
+                            options: function (data: any) {
                                 let defaultLabel: string = null;
                                 let defaultValue: string = null;
 
-                                // default, should not apeare
                                 if (isNull(data.properties.templateContentLibrary)
-                                        || typeof(data.properties.templateContentLibrary)==="undefined") {
+                                    || typeof (data.properties.templateContentLibrary) === "undefined") {
                                     return [{
                                         value: "defaultValue",
                                         label: "defaultLable"
@@ -99,9 +88,9 @@ let parameter = {
                                 }
 
                                 if (!isNull(data.properties.template)
-                                        && typeof(data.properties.template)!=="undefined") {
+                                    && typeof (data.properties.template) !== "undefined") {
                                     defaultValue = data.properties.template,
-                                    defaultLabel = data.properties.template.split("/")[3];
+                                        defaultLabel = data.properties.template.split("/")[3];
                                 }
 
                                 return propertyHelperContent<ILibrary[]>(
@@ -118,7 +107,7 @@ let parameter = {
                             },
                             show: function (data: any) {
                                 if (!isNull(data.properties.templateContentLibrary)
-                                    && typeof(data.properties.templateContentLibrary)!=="undefined") {
+                                    && typeof (data.properties.templateContentLibrary) !== "undefined") {
                                     return true;
                                 }
                                 return false;
@@ -142,18 +131,18 @@ let parameter = {
                             label: "Selection Mode",
                             component: "dropdown",
                             options: [
-                            {
-                                value: 0,
-                                label: "Selection over shared session"
-                            },
-                            {
-                                value: 1,
-                                label: "Selection over bookmark"
-                            },
-                            {
-                                value: 2,
-                                label: "not Use"
-                            }, ],
+                                {
+                                    value: 0,
+                                    label: "Selection over shared session"
+                                },
+                                {
+                                    value: 1,
+                                    label: "Selection over bookmark"
+                                },
+                                {
+                                    value: 2,
+                                    label: "not Use"
+                                },],
                             defaultValue: 0
                         },
                         directDownload: {
@@ -204,13 +193,12 @@ let parameter = {
         }
     }
 };
-//#endregion
 
 class OnDemandExtension {
 
     model: EngineAPI.IGenericObject;
     scope: any;
-    content : ILibrary[];
+    content: ILibrary[];
 
     //#region logger
     private _logger: logging.Logger;
@@ -227,21 +215,21 @@ class OnDemandExtension {
     //#endregion
 
     //#region mode
-    private _mode : boolean;
-    public get mode() : boolean {
+    private _mode: boolean;
+    public get mode(): boolean {
         return this._mode;
     }
-    public set mode(v : boolean) {
+    public set mode(v: boolean) {
         if (this.mode !== v) {
             this._mode = v;
 
             this.getPropertyContent(this.model.app)
-            .then((content) => {
-                this.content = content;
-            })
-            .catch((error) => {
-                this.logger.error("ERROR in constructor of OnDemandExtension", error);
-            });
+                .then((content) => {
+                    this.content = content;
+                })
+                .catch((error) => {
+                    this.logger.error("ERROR in setter of model in OnDemandExtension", error);
+                });
         }
     }
     //#endregion
@@ -253,16 +241,20 @@ class OnDemandExtension {
         this.model = utils.getEnigma(scope);
 
         this.getPropertyContent(this.model.app)
-        .then((content) => {
-            this.content = content;
-        })
-        .catch((error) => {
-            this.logger.error("ERROR in constructor of OnDemandExtension", error);
-        });
+            .then((content) => {
+                this.content = content;
+            })
+            .catch((error) => {
+                this.logger.error("ERROR in constructor of OnDemandExtension", error);
+            });
 
     }
 
-    public isEditMode() {
+    /**
+     * checks if client is in edit or in analyse mode
+     * @returns boolean, return true if client is in edit mode
+     */
+    public isEditMode(): boolean {
         if (qlik.navigation.getMode() === "analysis") {
             this.mode = false;
             return false;
@@ -272,38 +264,32 @@ class OnDemandExtension {
         }
     }
 
-    private  getPropertyContent(app: EngineAPI.IApp): Promise<ILibrary[]> {
+    private getPropertyContent(app: EngineAPI.IApp): Promise<ILibrary[]> {
+        this.logger.debug("fcn called getPropertyContent");
         return new Promise((resolve, reject) => {
-
+            let returnVal: ILibrary[] = [];
             app.getContentLibraries()
-            .then((res: any) => {
-                let list: Array<EngineAPI.IContentLibraryListItem> = res;
+                .then((res: any) => {
+                    let list: Array<EngineAPI.IContentLibraryListItem> = res;
+                    let promAllContent: Promise<EngineAPI.IStaticContentList>[] = [];
 
-                let returnVal: ILibrary[] = [];
-                let promAllContent: Promise<EngineAPI.IStaticContentList>[] = [];
+                    for (const item of list) {
+                        this.logger.debug("contentLibrary loaded: ", item.qName);
 
-
-                for (const item of list) {
-                    let inApp: boolean = false;
-                    if (item.qAppSpecific === true) {
-                        inApp = true;
+                        let label: string = item.qAppSpecific === true ? "in App" : item.qName;
+                        let lib: ILibrary = {
+                            label: label,
+                            value: label,
+                            content: []
+                        };
+                        returnVal.push(lib);
+                        promAllContent.push(app.getLibraryContent(item.qName));
                     }
-
-                    let label: string = item.qAppSpecific===true?"in App":item.qName;
-
-                    let lib: ILibrary = {
-                        label: label,
-                        value: label,
-                        content: []
-                    };
-                    returnVal.push(lib);
-                    promAllContent.push(app.getLibraryContent(item.qName));
-                }
-
-
-                let counter = 0;
-                Promise.all(promAllContent)
+                    return Promise.all(promAllContent);
+                })
                 .then((res) => {
+                    this.logger.debug("libary content loaded");
+                    let counter = 0;
 
                     for (const contentLib of res) {
                         let items: EngineAPI.IStaticContentListItem[] = (contentLib as any);
@@ -316,41 +302,34 @@ class OnDemandExtension {
                                 let lib = (value.qUrl as string).split("/")[2];
                                 let name = (value.qUrl as string).split("/")[3];
 
-
-
                                 returnVal[counter].content.push({
-                                    value: `content://${returnVal[counter].label==="in App"?"":lib}/${name}`,
+                                    value: `content://${returnVal[counter].label === "in App" ? "" : lib}/${name}`,
                                     label: decodeURI(name)
                                 });
                             }
                         }
-                        counter ++;
+                        counter++;
                     }
                     resolve(returnVal);
-
                 })
                 .catch((error) => {
-                    console.error("ERROR", error);
+                    reject(error);
                 });
-
-            })
-            .catch((error) => {
-                reject(error);
-            });
         });
     }
-
 }
 
+
+
 export = {
-    definition: parameter,
-    initialProperties: { },
+    definition: properties,
+    initialProperties: {},
     template: template,
     paint: () => {
-        //
+        // empty function to avoid braking when paint method is required
     },
     resize: () => {
-        //
+        // empty function to avoid braking when resize method is required
     },
     controller: ["$scope", function (scope: IVMScopeExtended) {
 

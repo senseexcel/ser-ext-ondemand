@@ -38,34 +38,33 @@ import {
 class OnDemandController implements ng.IController {
 
     //#region variables
-    invalid: boolean = false;
-    appId: string;
-    appPublished: boolean;
-    bookmarkName: string = "serBookmarkOnDemand";
     clicked: boolean = false;
+    invalid: boolean = false;
     actionRunable: boolean = false;
     editMode: boolean;
-    element: JQuery;
-    host: string;
-    interval: NodeJS.Timer;
-    intervalShort: number = 3000;
-    intervalLong: number = 6000;
-    links: string[];
-    noPropertiesSet: boolean = true;
-    properties: IProperties = {
+    running: boolean = false;
+    title: string = "Generate Report";
+
+    private appId: string;
+    private appPublished: boolean;
+    private bookmarkName: string = "serBookmarkOnDemand";
+    private host: string;
+    private interval: number;
+    private intervalShort: number = 3000;
+    private intervalLong: number = 6000;
+    private links: string[];
+    private noPropertiesSet: boolean = true;
+    private properties: IProperties = {
         template: " ",
         output: " ",
         selection: 0,
         directDownload: false
     };
-    username: string;
-    running: boolean = false;
-    sheetId: string;
-    title: string = "Generate Report";
-    tempContentLibIndex: number;
-    taskId: string;
-    timeout: ng.ITimeoutService;
-    timeoutAfterStop: number = 2000;
+    private username: string;
+    private sheetId: string;
+    private tempContentLibIndex: number;
+    private taskId: string;
+    private timeoutAfterStop: number = 2000;
     //#endregion
 
     //#region logger
@@ -245,25 +244,18 @@ class OnDemandController implements ng.IController {
             if (typeof (this.modelOnChangedFunction) === "function") {
                 (this.model as any).removeListener("changed", this.modelOnChangedFunction);
             }
-            // this.model.
         } catch {
             this.logger.debug("could not clear interval onDestroy");
         }
     }
 
-    static $inject = ["$timeout", "$element", "$scope"];
+    static $inject = ["$timeout", "$scope"];
 
     /**
      * init of the controller for the Directive
-     * @param timeout
-     * @param element
-     * @param scope
      */
-    constructor(timeout: ng.ITimeoutService, element: JQuery, scope: ng.IScope) {
-
-        this.element = element;
-        this.timeout = timeout;
-
+    constructor() {
+        // empty constructor
     }
 
     //#region private function
@@ -388,7 +380,7 @@ class OnDemandController implements ng.IController {
         if (typeof (intervalTime) === "undefined") {
             intervalTime = 5000;
         }
-        this.interval = setInterval(() => {
+        this.interval = window.setInterval(() => {
             this.getStatus(this.taskId);
         }, intervalTime);
     }
@@ -419,7 +411,8 @@ class OnDemandController implements ng.IController {
 
             case 1:
                 connection = {
-                    app: this.appId
+                    app: this.appId,
+                    identities: ["1234567"]
                 };
                 template = {
                     input: this.properties.template,
@@ -718,6 +711,7 @@ class OnDemandController implements ng.IController {
 
                         let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
 
+                        this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
@@ -825,7 +819,6 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             bindToController: {
                 model: "<",
                 libraryContent: "<",
-                theme: "<?",
                 editMode: "<?"
             },
             compile: (): void => {
