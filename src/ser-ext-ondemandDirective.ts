@@ -411,8 +411,7 @@ class OnDemandController implements ng.IController {
 
             case 1:
                 connection = {
-                    app: this.appId,
-                    identities: ["1234567"]
+                    app: this.appId
                 };
                 template = {
                     input: this.properties.template,
