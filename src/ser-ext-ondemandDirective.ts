@@ -65,6 +65,8 @@ class OnDemandController implements ng.IController {
     private tempContentLibIndex: number;
     private taskId: string;
     private timeoutAfterStop: number = 2000;
+    private timeoutResponseRevieved = true;
+    private timeoutResponseCounter = 0;
     //#endregion
 
     //#region logger
@@ -380,8 +382,14 @@ class OnDemandController implements ng.IController {
         if (typeof (intervalTime) === "undefined") {
             intervalTime = 5000;
         }
-        this.interval = window.setInterval(() => {
-            this.getStatus(this.taskId);
+        this.interval = window.setInterval(async () => {
+            this.timeoutResponseCounter++;
+            if (this.timeoutResponseRevieved || this.timeoutResponseCounter > 10) {
+                this.timeoutResponseRevieved = false;
+                this.timeoutResponseRevieved = await this.getStatus(this.taskId);
+            }
+
+
         }, intervalTime);
     }
 
@@ -644,7 +652,7 @@ class OnDemandController implements ng.IController {
         });
     }
 
-    private getStatus(taskId: string) {
+    private async getStatus(taskId: string) {
         this.logger.debug("fcn: getStatus");
         let reqestJson: ISERRequestStatus = {};
         if (typeof (taskId) !== "undefined") {
@@ -660,74 +668,77 @@ class OnDemandController implements ng.IController {
         let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
         this.logger.debug("call fcn getStatus", serCall);
 
-        this.model.app.evaluate(serCall)
-            .then((response) => {
-                let statusObject: ISERResponseStatus;
-                this.logger.debug("response from status call", response);
+        try {
+            var response = await this.model.app.evaluate(serCall);
+            let statusObject: ISERResponseStatus;
+            this.logger.debug("response from status call", response);
 
-                try {
-                    if (response.indexOf("Error in expression") !== -1) {
-                        this.logger.warn(response);
-                        this.state = ESERState.serNotRunning;
-                        return;
-                    }
-                } catch (error) {
-                    this.logger.error("ERROR", error);
-                    return;
+            try {
+                if (response.indexOf("Error in expression") !== -1) {
+                    this.logger.warn(response);
+                    this.state = ESERState.serNotRunning;
+                    return true;
                 }
-
-                try {
-                    statusObject = JSON.parse(response);
-                } catch (error) {
-                    this.logger.error("Error log from SER: ", response);
-                    this.state = ESERState.error;
-                }
-
-                if (typeof (statusObject.taskId) !== "undefined") {
-                    this.taskId = statusObject.taskId;
-                }
-
-                this.logger.debug("statusObject.Status", statusObject.status);
-
-                switch (statusObject.status) {
-                    case -2:
-                        this.state = ESERState.serNoConnectionQlik;
-                        break;
-                    case -1:
-                        this.state = ESERState.error;
-                        break;
-                    case 0:
-                        this.state = ESERState.ready;
-                        this.logger.info("SER Status is ready");
-                        break;
-                    case 1:
-                        this.state = ESERState.running;
-                        break;
-                    case 2:
-                        this.state = ESERState.running;
-                        break;
-                    case 3:
-
-                        let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
-
-                        this.links = [];
-                        for (const hubResult of distributeObject.hubResults) {
-                            if (hubResult.success) {
-                                this.links.push(`${this.host}${hubResult.link}`)
-                            }
-                        }
-                        this.state = ESERState.finished;
-                        break;
-
-                    default:
-                        this.state = ESERState.error;
-                        break;
-                }
-            })
-            .catch((error) => {
-                this.state = ESERState.serNotRunning;
+            } catch (error) {
                 this.logger.error("ERROR", error);
-            });
+                return true;
+            }
+
+            try {
+                statusObject = JSON.parse(response);
+            } catch (error) {
+                this.logger.error("Error log from SER: ", response);
+                this.state = ESERState.error;
+                return true
+            }
+
+            if (typeof (statusObject.taskId) !== "undefined") {
+                this.taskId = statusObject.taskId;
+            }
+
+            this.logger.debug("statusObject.Status", statusObject.status);
+
+            switch (statusObject.status) {
+                case -2:
+                    this.state = ESERState.serNoConnectionQlik;
+                    break;
+                case -1:
+                    this.state = ESERState.error;
+                    break;
+                case 0:
+                    this.state = ESERState.ready;
+                    this.logger.info("SER Status is ready");
+                    break;
+                case 1:
+                    this.state = ESERState.running;
+                    break;
+                case 2:
+                    this.state = ESERState.running;
+                    break;
+                case 3:
+
+                    let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
+
+                    this.links = [];
+                    for (const hubResult of distributeObject.hubResults) {
+                        if (hubResult.success) {
+                            this.links.push(`${this.host}${hubResult.link}`)
+                        }
+                    }
+                    this.state = ESERState.finished;
+                    break;
+
+                default:
+                    this.state = ESERState.error;
+                    break;
+            }
+            return true
+
+        } catch (error) {
+            this.logger.error(error);
+            this.state = ESERState.serNotRunning;
+            return true;
+        }
     }
 
     private stopReport() {
