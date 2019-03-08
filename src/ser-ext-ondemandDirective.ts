@@ -786,7 +786,11 @@ class OnDemandController implements ng.IController {
                 this.title = "Generate Report";
                 this.state = ESERState.ready;
                 for (const link of this.links) {
-                    window.open(link, "_blank");
+                    if (link.length > 0) {
+                        window.open(link, "_blank");
+                    } else {
+                        this.title = "no Link found - retry generation";
+                    }
                 }
                 this.stopReport();
                 break;
