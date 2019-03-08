@@ -411,8 +411,7 @@ class OnDemandController implements ng.IController {
 
             case 1:
                 connection = {
-                    app: this.appId,
-                    identities: ["1234567"]
+                    app: this.appId
                 };
                 template = {
                     input: this.properties.template,
@@ -776,7 +775,11 @@ class OnDemandController implements ng.IController {
                 this.title = "Generate Report";
                 this.state = ESERState.ready;
                 for (const link of this.links) {
-                    window.open(link, "_blank");
+                    if (link.length > 0) {
+                        window.open(link, "_blank");
+                    } else {
+                        this.title = "no Link found - retry generation";
+                    }
                 }
                 this.stopReport();
                 break;
