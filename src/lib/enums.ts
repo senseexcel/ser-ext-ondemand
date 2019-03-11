@@ -5,7 +5,8 @@ export enum ESERState {
     error,
     serNotRunning,
     serNoConnectionQlik,
-    noProperties
+    noProperties,
+    stopping
 }
 
 export enum EVersionOption {

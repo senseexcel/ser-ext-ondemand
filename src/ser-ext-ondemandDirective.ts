@@ -152,6 +152,13 @@ class OnDemandController implements ng.IController {
                     this.title = "No Properties selected";
                     break;
 
+                case ESERState.stopping:
+                    this.running = true;
+                    this.clicked = false;
+                    this.actionRunable = false;
+                    this.title = "stopping report creation"
+                    break;
+
                 default:
                     this.running = false;
                     this.clicked = false;
@@ -718,7 +725,9 @@ class OnDemandController implements ng.IController {
                         }
                         this.state = ESERState.finished;
                         break;
-
+                    case 4:
+                        this.state = ESERState.stopping;
+                        break;
                     default:
                         this.state = ESERState.error;
                         break;
@@ -768,7 +777,7 @@ class OnDemandController implements ng.IController {
                 this.start();
                 break;
             case ESERState.running:
-                this.title = "Aborting ... ";
+                this.state = ESERState.stopping;
                 this.stopReport();
                 break;
             case ESERState.finished:
