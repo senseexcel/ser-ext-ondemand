@@ -48,6 +48,7 @@ class OnDemandController implements ng.IController {
     private appId: string;
     private appPublished: boolean;
     private bookmarkName: string = "serBookmarkOnDemand";
+    private tagName: string = "SER";
     private host: string;
     private interval: number;
     private intervalShort: number = 3000;
@@ -525,6 +526,7 @@ class OnDemandController implements ng.IController {
                 },
                 qMetaDef: {
                     title: this.bookmarkName,
+                    tag: [this.tagName],
                     approved: false
                 },
                 sheetId: this.sheetId,
@@ -541,7 +543,7 @@ class OnDemandController implements ng.IController {
                     for (const bookmark of bookmarksTyped) {
                         try {
                             let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
-                            if (meta.title === this.bookmarkName) {
+                            if (meta.tag.indexOf(this.tagName) > -1) {
                                 proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
                             }
                         } catch {
