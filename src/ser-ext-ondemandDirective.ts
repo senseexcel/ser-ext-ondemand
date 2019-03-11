@@ -526,7 +526,7 @@ class OnDemandController implements ng.IController {
                 },
                 qMetaDef: {
                     title: this.bookmarkName,
-                    tag: [this.tagName],
+                    tags: [this.tagName],
                     approved: false
                 },
                 sheetId: this.sheetId,
@@ -543,7 +543,7 @@ class OnDemandController implements ng.IController {
                     for (const bookmark of bookmarksTyped) {
                         try {
                             let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
-                            if (meta.tag.indexOf(this.tagName) > -1) {
+                            if (meta.tags.indexOf(this.tagName) > -1) {
                                 proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
                             }
                         } catch {
