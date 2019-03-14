@@ -6,7 +6,8 @@ export enum ESERState {
     serNotRunning,
     serNoConnectionQlik,
     noProperties,
-    stopping
+    stopping,
+    starting
 }
 
 export enum ESerResponseStatus {
