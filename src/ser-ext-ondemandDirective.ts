@@ -65,6 +65,7 @@ class OnDemandController implements ng.IController {
     private tempContentLibIndex: number;
     private taskId: string;
     private timeoutAfterStop: number = 2000;
+    private reportDownloaded = false;
     //#endregion
 
     //#region logger
@@ -773,6 +774,7 @@ class OnDemandController implements ng.IController {
             case ESERState.ready:
                 this.clicked = true;
                 this.running = true;
+                this.reportDownloaded = false;
                 this.title = "Running ... (click to abort)";
                 this.start();
                 break;
@@ -783,6 +785,11 @@ class OnDemandController implements ng.IController {
             case ESERState.finished:
                 this.title = "Generate Report";
                 this.state = ESERState.ready;
+
+                if (this.reportDownloaded) {
+                    break;
+                }
+
                 for (const link of this.links) {
                     if (link.length > 0) {
                         window.open(link, "_blank");
@@ -790,7 +797,7 @@ class OnDemandController implements ng.IController {
                         this.title = "no Link found - retry generation";
                     }
                 }
-                this.stopReport();
+                this.reportDownloaded = true;
                 break;
 
             default:
