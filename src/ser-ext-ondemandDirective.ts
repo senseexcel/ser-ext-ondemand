@@ -31,7 +31,8 @@ import {
 } from "./lib/interfaces";
 import {
     ESERState,
-    EVersionOption
+    EVersionOption,
+    ESerResponseStatus
 } from "./lib/enums";
 //#endregion
 
@@ -48,6 +49,7 @@ class OnDemandController implements ng.IController {
     private appId: string;
     private appPublished: boolean;
     private bookmarkName: string = "serBookmarkOnDemand";
+    private tagName: string = "SER";
     private host: string;
     private interval: number;
     private intervalShort: number = 3000;
@@ -66,6 +68,8 @@ class OnDemandController implements ng.IController {
     private taskId: string;
     private timeoutAfterStop: number = 2000;
     private reportDownloaded = false;
+    private timeoutResponseRevieved = true;
+    private timeoutResponseCounter = 0;
     //#endregion
 
     //#region logger
@@ -388,8 +392,12 @@ class OnDemandController implements ng.IController {
         if (typeof (intervalTime) === "undefined") {
             intervalTime = 5000;
         }
-        this.interval = window.setInterval(() => {
-            this.getStatus(this.taskId);
+        this.interval = window.setInterval(async () => {
+            this.timeoutResponseCounter++;
+            if (this.timeoutResponseRevieved || this.timeoutResponseCounter > 10) {
+                this.timeoutResponseRevieved = false;
+                this.timeoutResponseRevieved = await this.getStatus(this.taskId);
+            }
         }, intervalTime);
     }
 
@@ -533,6 +541,7 @@ class OnDemandController implements ng.IController {
                 },
                 qMetaDef: {
                     title: this.bookmarkName,
+                    tags: [this.tagName],
                     approved: false
                 },
                 sheetId: this.sheetId,
@@ -547,13 +556,9 @@ class OnDemandController implements ng.IController {
                     let proms: Promise<void>[] = [];
                     let bookmarksTyped: EngineAPI.INxContainerEntry<any>[] = bookmarks as any;
                     for (const bookmark of bookmarksTyped) {
-                        try {
-                            let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
-                            if (meta.title === this.bookmarkName) {
-                                proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
-                            }
-                        } catch {
-                            // if the bookmark is not correct, just do nothing
+                        let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
+                        if (meta.tags.indexOf(this.tagName) > -1) {
+                            proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
                         }
                     }
                     return Promise.all(proms);
@@ -652,7 +657,7 @@ class OnDemandController implements ng.IController {
         });
     }
 
-    private getStatus(taskId: string) {
+    private async getStatus(taskId: string) {
         this.logger.debug("fcn: getStatus");
         let reqestJson: ISERRequestStatus = {};
         if (typeof (taskId) !== "undefined") {
@@ -668,76 +673,81 @@ class OnDemandController implements ng.IController {
         let serCall: string = `SER.Status('${JSON.stringify(reqestJson)}')`;
         this.logger.debug("call fcn getStatus", serCall);
 
-        this.model.app.evaluate(serCall)
-            .then((response) => {
-                let statusObject: ISERResponseStatus;
-                this.logger.debug("response from status call", response);
+        try {
+            var response = await this.model.app.evaluate(serCall);
+            let statusObject: ISERResponseStatus;
+            this.logger.debug("response from status call", response);
 
-                try {
-                    if (response.indexOf("Error in expression") !== -1) {
-                        this.logger.warn(response);
-                        this.state = ESERState.serNotRunning;
-                        return;
-                    }
-                } catch (error) {
-                    this.logger.error("ERROR", error);
-                    return;
+            try {
+                if (response.indexOf("Error in expression") !== -1) {
+                    this.logger.warn(response);
+                    this.state = ESERState.serNotRunning;
+                    return true;
                 }
-
-                try {
-                    statusObject = JSON.parse(response);
-                } catch (error) {
-                    this.logger.error("Error log from SER: ", response);
-                    this.state = ESERState.error;
-                }
-
-                if (typeof (statusObject.taskId) !== "undefined") {
-                    this.taskId = statusObject.taskId;
-                }
-
-                this.logger.debug("statusObject.Status", statusObject.status);
-
-                switch (statusObject.status) {
-                    case -2:
-                        this.state = ESERState.serNoConnectionQlik;
-                        break;
-                    case -1:
-                        this.state = ESERState.error;
-                        break;
-                    case 0:
-                        this.state = ESERState.ready;
-                        this.logger.info("SER Status is ready");
-                        break;
-                    case 1:
-                        this.state = ESERState.running;
-                        break;
-                    case 2:
-                        this.state = ESERState.running;
-                        break;
-                    case 3:
-
-                        let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
-
-                        this.links = [];
-                        for (const hubResult of distributeObject.hubResults) {
-                            if (hubResult.success) {
-                                this.links.push(`${this.host}${hubResult.link}`)
-                            }
-                        }
-                        this.state = ESERState.finished;
-                        break;
-                    case 4:
-                        this.state = ESERState.stopping;
-                        break;
-                    default:
-                        this.state = ESERState.error;
-                        break;
-                }
-            })
-            .catch((error) => {
-                this.state = ESERState.serNotRunning;
+            } catch (error) {
                 this.logger.error("ERROR", error);
-            });
+                return true;
+            }
+
+            try {
+                statusObject = JSON.parse(response);
+            } catch (error) {
+                this.logger.error("Error log from SER: ", response);
+                this.state = ESERState.error;
+                return true
+            }
+
+            if (typeof (statusObject.taskId) !== "undefined") {
+                this.taskId = statusObject.taskId;
+            }
+
+            this.logger.debug("statusObject.Status", statusObject.status);
+
+            switch (statusObject.status) {
+                case ESerResponseStatus.serConnectionQlikError:
+                    this.state = ESERState.serNoConnectionQlik;
+                    break;
+                case ESerResponseStatus.serError:
+                    this.state = ESERState.error;
+                    break;
+                case ESerResponseStatus.serReady:
+                    this.state = ESERState.ready;
+                    this.logger.info("SER Status is ready");
+                    break;
+                case ESerResponseStatus.serRunning:
+                    this.state = ESERState.running;
+                    break;
+                case ESerResponseStatus.serBuildReport:
+                    this.state = ESERState.running;
+                    break;
+                case ESerResponseStatus.serFinished:
+
+                    let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
+
+                    this.links = [];
+                    for (const hubResult of distributeObject.hubResults) {
+                        if (hubResult.success) {
+                            this.links.push(`${this.host}${hubResult.link}`)
+                        }
+                    }
+                    this.state = ESERState.finished;
+                    break;
+
+                case ESerResponseStatus.serStopping:
+                    this.state = ESERState.stopping;
+                    break;
+
+                default:
+                    this.state = ESERState.error;
+                    break;
+            }
+            return true
+
+        } catch (error) {
+            this.logger.error(error);
+            this.state = ESERState.serNotRunning;
+            return true;
+        }
     }
 
     private stopReport() {

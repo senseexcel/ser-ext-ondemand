@@ -4,7 +4,8 @@ import { logging }                      from "../node_modules/davinci.js/dist/um
 import { ISerConfig,
          ISerReport}                    from "../node_modules/ser.api/index";
 import { EVersionOption,
-         ETaskOption }                  from "./enums";
+         ETaskOption,
+         ESerResponseStatus }                  from "./enums";
 //#endregion
 
 export interface ISERRequestStart extends ISerConfig {
@@ -25,7 +26,7 @@ export interface ISERResponseStatusVersion {
 }
 
 export interface ISERResponseStatus {
-    status: number;
+    status: ESerResponseStatus;
     log: string;
     taskId: string;
     versions: ISERResponseStatusVersion[];
@@ -79,6 +80,7 @@ export interface IGenericBookmarkLayoutMetaExtended extends EngineAPI.INxMetaTit
     privileges: string[];
     approved: boolean;
     title: string;
+    tags: string[];
 }
 
 export interface IGenericBookmarkExtended extends EngineAPI.IGenericBookmark {
