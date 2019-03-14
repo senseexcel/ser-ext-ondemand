@@ -79,6 +79,7 @@ export interface IGenericBookmarkLayoutMetaExtended extends EngineAPI.INxMetaTit
     privileges: string[];
     approved: boolean;
     title: string;
+    tags: string[];
 }
 
 export interface IGenericBookmarkExtended extends EngineAPI.IGenericBookmark {
