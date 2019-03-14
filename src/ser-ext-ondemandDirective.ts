@@ -541,13 +541,9 @@ class OnDemandController implements ng.IController {
                     let proms: Promise<void>[] = [];
                     let bookmarksTyped: EngineAPI.INxContainerEntry<any>[] = bookmarks as any;
                     for (const bookmark of bookmarksTyped) {
-                        try {
-                            let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
-                            if (meta.tags.indexOf(this.tagName) > -1) {
-                                proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
-                            }
-                        } catch {
-                            // if the bookmark is not correct, just do nothing
+                        let meta: IGenericBookmarkLayoutMetaExtended = bookmark.qMeta as IGenericBookmarkLayoutMetaExtended;
+                        if (meta.tags.indexOf(this.tagName) > -1) {
+                            proms.push(this.destroyExistingBookmark(bookmark.qInfo.qId));
                         }
                     }
                     return Promise.all(proms);
