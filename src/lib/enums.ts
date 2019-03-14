@@ -8,6 +8,16 @@ export enum ESERState {
     noProperties
 }
 
+export enum ESerResponseStatus {
+    serConnectionQlikError = -2,
+    serError = -1,
+    serReady = 0,
+    serRunning = 1,
+    serBuildReport = 2,
+    serFinished = 3,
+    serStopping = 4
+}
+
 export enum EVersionOption {
     all
 }

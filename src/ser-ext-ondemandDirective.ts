@@ -31,7 +31,8 @@ import {
 } from "./lib/interfaces";
 import {
     ESERState,
-    EVersionOption
+    EVersionOption,
+    ESerResponseStatus
 } from "./lib/enums";
 //#endregion
 
@@ -696,7 +697,30 @@ class OnDemandController implements ng.IController {
                 this.taskId = statusObject.taskId;
             }
 
+<<<<<<< Updated upstream
             this.logger.debug("statusObject.Status", statusObject.status);
+=======
+                switch (statusObject.status) {
+                    case ESerResponseStatus.serConnectionQlikError:
+                        this.state = ESERState.serNoConnectionQlik;
+                        break;
+                    case ESerResponseStatus.serBuildReport:
+                        this.state = ESERState.error;
+                        break;
+                    case ESerResponseStatus.serReady:
+                        this.state = ESERState.ready;
+                        this.logger.info("SER Status is ready");
+                        break;
+                    case ESerResponseStatus.serRunning:
+                        this.state = ESERState.running;
+                        break;
+                    case ESerResponseStatus.serBuildReport:
+                        this.state = ESERState.running;
+                        break;
+                    case ESerResponseStatus.serFinished:
+
+                        let distributeObject: IDistribute = JSON.parse(statusObject.distribute);
+>>>>>>> Stashed changes
 
             switch (statusObject.status) {
                 case -2:
@@ -724,6 +748,7 @@ class OnDemandController implements ng.IController {
                         if (hubResult.success) {
                             this.links.push(`${this.host}${hubResult.link}`)
                         }
+<<<<<<< Updated upstream
                     }
                     this.state = ESERState.finished;
                     break;
@@ -739,6 +764,22 @@ class OnDemandController implements ng.IController {
             this.state = ESERState.serNotRunning;
             return true;
         }
+=======
+                        this.state = ESERState.finished;
+                        break;
+                    case ESerResponseStatus.serStopping:
+                        this.state = ESERState.stopping;
+                        break;
+                    default:
+                        this.state = ESERState.error;
+                        break;
+                }
+            })
+            .catch((error) => {
+                this.state = ESERState.serNotRunning;
+                this.logger.error("ERROR", error);
+            });
+>>>>>>> Stashed changes
     }
 
     private stopReport() {
