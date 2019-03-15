@@ -1,18 +1,14 @@
 <div class="root-container" ng-class="{'root-container-{{vm.theme}}':true}" tabindex="0"
-     q2g-shortcut-scope="rootelement" style="height:100%; width:100%">
+     q2g-shortcut-scope="rootelement">
 
+     <div class="button-wrapper">
 
-     <div style="position:absolute">
-
-
-          <div ng-click="vm.action()" class="lui-button lui-button--rounded lui-button--info"
+          <div ng-click="vm.action()" class="ser-button lui-button lui-button--rounded lui-button--info"
                ng-class="{'inactive': vm.inactive }"
-               
-               
+
                q2g-shortcut shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
                shortcut-action="vm.action()">
                {{vm.title}}
-
 
                <div class="spinner"
                     ng-if="vm.running">
@@ -23,9 +19,14 @@
 
 
           </div>
-          <div style="position:relative; top: 25px" ng-if="vm.reportError">Check Logs</div>
+
+          <div class="error-container" ng-if="vm.reportError">Check Logs</div>
+
           <q2g-identifier show="vm.isEditMode()"></q2g-identifier>
 
           <div ng-if="vm.isEditMode()" class="editMode">
           </div>
+
      </div>
+
+</div>

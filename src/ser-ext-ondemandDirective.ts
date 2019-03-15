@@ -35,7 +35,6 @@ class OnDemandController implements ng.IController {
         directDownload: false
     };
     private username: string;
-    private sheetId: string;
     private tempContentLibIndex: number;
     private taskId: string;
     private timeoutAfterStop: number = 2000;
@@ -69,14 +68,16 @@ class OnDemandController implements ng.IController {
     public set state(v: ESERState) {
         if (v !== this._state) {
             this.logger.debug("STATE: ", v);
+
             if (this.noPropertiesSet) {
                 v = ESERState.noProperties;
             }
 
+            this._state = v;
             switch (v) {
 
                 case ESERState.starting:
-                    this.interactOptions(false, true, false);
+                    this.interactOptions(true, true, false);
                     this.title = "Starting";
                     break;
 
@@ -95,7 +96,6 @@ class OnDemandController implements ng.IController {
 
                 case ESERState.finished:
                     this.interactOptions(false, false, false);
-                    this.title = "Download Report";
 
                     try {
                         let distributeObject: IDistribute = JSON.parse(this.distribute);
@@ -106,15 +106,13 @@ class OnDemandController implements ng.IController {
                             }
                         }
                     } catch (error) {
-                        // do something
+                        this.state = ESERState.error;
                     }
-
                     if (this.properties.directDownload) {
                         this.action();
+                    } else {
+                        this.title = "Download Report";
                     }
-
-                    this.clearInterval();
-                    this.setStatusInterval(this.intervalLong);
                     break;
 
                 case ESERState.serNotRunning:
@@ -133,8 +131,13 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case ESERState.stopping:
-                    this.interactOptions(false, true, false)
+                    this.interactOptions(true, true, false)
                     this.title = "stopping report creation"
+                    break;
+
+                case ESERState.errorNoLinkFound:
+                    this.interactOptions(false, false, true)
+                    this.title = "no Link found - retry generation"
                     break;
 
                 default:
@@ -142,7 +145,6 @@ class OnDemandController implements ng.IController {
                     this.title = "Error while running - Retry";
                     break;
             }
-            this._state = v;
         }
     }
     //#endregion
@@ -160,15 +162,10 @@ class OnDemandController implements ng.IController {
                 let hostArr: Array<string> = ((this.model as any).session.rpc.url as string).split("/");
                 this.host = `${hostArr[0] === "wss:" ? "https" : "http"}://${hostArr[2]}${hostArr[3] !== "app" ? "/" + hostArr[3] : ""}`;
 
-                let arrProm: Promise<string | boolean>[] = [];
-                arrProm.push(this.app.getUsername());
-                arrProm.push(this.app.getSheetId(this.model.id));
-
-                Promise.all(arrProm)
+                this.app.getUsername()
                     .then((res) => {
                         this.logger.info(this.username);
-                        this.username = res[0] as string;
-                        this.sheetId = res[1] as string;
+                        this.username = res;
                     })
                     .catch((error) => {
                         this.logger.error("error in setter of model", error);
@@ -198,7 +195,6 @@ class OnDemandController implements ng.IController {
         if (v !== this._libraryContent && typeof (v) !== "undefined") {
             this._libraryContent = v;
         }
-
     }
     //#endregion
 
@@ -240,12 +236,9 @@ class OnDemandController implements ng.IController {
                     this.state = ESERState.noProperties;
                 } else {
                     this.noPropertiesSet = false;
-                    this.state = ESERState.ready;
+                    this.getStatus(this.taskId);
                 }
-                this.extractObjectProperties(res.properties)
-                    .catch((error) => {
-                        this.logger.error("error", error);
-                    });
+                return this.extractObjectProperties(res.properties)
             })
             .catch((error) => {
                 this.logger.error("ERROR in setter of model ", error);
@@ -355,6 +348,7 @@ class OnDemandController implements ng.IController {
     private start(): void {
         this.logger.debug("fcn: start");
         this.state = ESERState.starting;
+        this.reportDownloaded = false;
 
         if (this.properties.selection !== 1) {
             this.runSerStartCommand("")
@@ -453,10 +447,14 @@ class OnDemandController implements ng.IController {
         }
 
         return statusObject
-
     }
 
     private mapSerStatusAndSetStatus(status: ESerResponseStatus) {
+
+        if (this.reportDownloaded) {
+            return;
+        }
+
         switch (status) {
             case ESerResponseStatus.serConnectionQlikError:
                 this.state = ESERState.serNoConnectionQlik;
@@ -478,7 +476,7 @@ class OnDemandController implements ng.IController {
                 break;
 
             case ESerResponseStatus.serStopping:
-                this.state = ESERState.stopping;
+                this.state = ESERState.ready;
                 break;
 
             default:
@@ -501,7 +499,9 @@ class OnDemandController implements ng.IController {
 
         try {
             var response = await this.model.app.evaluate(serCall);
+
             this.logger.debug("response from status call", response);
+            this.timeoutResponseRevieved = true;
 
             let statusObject = this.evaluateStatusResult(response);
             if (isNullOrUndefined(statusObject)) {
@@ -519,12 +519,12 @@ class OnDemandController implements ng.IController {
             this.logger.debug("statusObject.Status", statusObject.status);
 
             this.mapSerStatusAndSetStatus(statusObject.status)
-            return true
+            return;
 
         } catch (error) {
             this.logger.error(error);
             this.state = ESERState.serNotRunning;
-            return true;
+            return;
         }
     }
 
@@ -561,7 +561,7 @@ class OnDemandController implements ng.IController {
             if (link.length > 0) {
                 window.open(link, "_blank");
             } else {
-                this.title = "no Link found - retry generation";
+                this.state = ESERState.errorNoLinkFound;
             }
         }
         this.reportDownloaded = true;
@@ -571,12 +571,8 @@ class OnDemandController implements ng.IController {
 
     //#region public functions
 
-    /**
-     * controller function for click actions
-     */
     public action() {
         this.logger.debug("fcn: action");
-
         if (this.inactive) {
             return;
         }
@@ -589,21 +585,18 @@ class OnDemandController implements ng.IController {
 
             case ESERState.finished:
                 this.downloadReport()
-                break;
-
-            case ESERState.ready:
-                this.start();
+                setTimeout(() => {
+                    this.clearInterval();
+                    this.setStatusInterval(this.intervalLong);
+                }, this.timeoutAfterStop);
                 break;
 
             default:
-                this.stopReport();
+                this.start();
                 break;
         }
     }
 
-    /**
-     * isEditMode
-     */
     public isEditMode(): boolean {
         if (this.editMode) {
             return true;
@@ -612,7 +605,6 @@ class OnDemandController implements ng.IController {
     }
 
     //#endregion
-
 }
 
 export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFactory {
