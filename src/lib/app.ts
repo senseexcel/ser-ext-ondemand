@@ -14,7 +14,7 @@ export class AppObject {
         this.getAppId();
     }
 
-    public getSheetId(objectId: string): Promise<string> {
+    public async getSheetId(objectId: string): Promise<string> {
         return new Promise((resolve, reject) => {
 
             this.app.getAllInfos()
@@ -51,7 +51,7 @@ export class AppObject {
         });
     }
 
-    public getUsername(): Promise<string> {
+    public async getUsername(): Promise<string> {
         return new Promise((resolve, reject) => {
             this.app.evaluateEx("=OSUser()")
                 .then((res) => {
@@ -64,7 +64,7 @@ export class AppObject {
         });
     }
 
-    public getAppId(): Promise<string> {
+    public async getAppId(): Promise<string> {
         return new Promise((resolve, reject) => {
             this.app.getAppLayout()
                 .then((res) => {
@@ -77,7 +77,7 @@ export class AppObject {
         });
     }
 
-    public getIsPublished(): Promise<boolean> {
+    public async getIsPublished(): Promise<boolean> {
         return new Promise((resolve, reject) => {
             this.app.getAppProperties()
                 .then((appProperties: INxAppPropertiesExtended) => {
@@ -94,7 +94,7 @@ export class AppObject {
         });
     }
 
-    private destroyExistingBookmark(id: string): Promise<void> {
+    private async destroyExistingBookmark(id: string): Promise<void> {
         return new Promise((resolve, reject) => {
             let obj: EngineAPI.IGenericBookmark;
             this.app.getBookmark(id)
@@ -138,7 +138,7 @@ export class AppObject {
         });
     }
 
-    public createBookmark(tagName: string, appIsPublished): Promise<string> {
+    public async createBookmark(tagName: string, appIsPublished): Promise<string> {
         return new Promise((resolve, reject) => {
             let bookmarkId: string = "";
             let bookmarkProperties: EngineAPI.IGenericBookmarkProperties = {

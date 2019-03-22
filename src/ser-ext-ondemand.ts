@@ -319,8 +319,6 @@ class OnDemandExtension {
     }
 }
 
-
-
 export = {
     definition: properties,
     initialProperties: {},
