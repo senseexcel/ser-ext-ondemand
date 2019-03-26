@@ -73,6 +73,10 @@ class OnDemandController implements ng.IController {
                 v = ESERState.noProperties;
             }
 
+            if (this.reportDownloaded && v === ESERState.finished) {
+                v = ESERState.ready;
+            }
+
             this._state = v;
             switch (v) {
 
@@ -83,9 +87,6 @@ class OnDemandController implements ng.IController {
 
                 case ESERState.ready:
                     this.interactOptions(false, false, false);
-                    setTimeout(() => {
-                        this.links = [];
-                    }, 1000);
                     this.title = "Generate Report";
                     break;
 
@@ -348,7 +349,6 @@ class OnDemandController implements ng.IController {
     private start(): void {
         this.logger.debug("fcn: start");
         this.state = ESERState.starting;
-        this.reportDownloaded = false;
 
         if (this.properties.selection !== 1) {
             this.runSerStartCommand("")
@@ -451,10 +451,6 @@ class OnDemandController implements ng.IController {
 
     private mapSerStatusAndSetStatus(status: ESerResponseStatus) {
 
-        if (this.reportDownloaded) {
-            return;
-        }
-
         switch (status) {
             case ESerResponseStatus.serConnectionQlikError:
                 this.state = ESERState.serNoConnectionQlik;
@@ -467,6 +463,7 @@ class OnDemandController implements ng.IController {
                 break;
             case ESerResponseStatus.serRunning:
                 this.state = ESERState.running;
+                this.reportDownloaded = false;
                 break;
             case ESerResponseStatus.serBuildReport:
                 this.state = ESERState.running;
@@ -565,6 +562,7 @@ class OnDemandController implements ng.IController {
             }
         }
         this.reportDownloaded = true;
+        this.links = [];
     }
 
     //#endregion
