@@ -5,7 +5,10 @@ export enum ESERState {
     error,
     serNotRunning,
     serNoConnectionQlik,
-    noProperties
+    noProperties,
+    stopping,
+    starting,
+    errorNoLinkFound
 }
 
 export enum ESerResponseStatus {
