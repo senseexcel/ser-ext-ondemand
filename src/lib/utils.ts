@@ -8,7 +8,7 @@ export function waitOnDefined<T>(property: Object, path: string, time: number): 
             try {
                 resolve(getProperty<T>(property, path));
             } catch (error) {
-                if (typeof(time)!=="undefined" && counter>time/timeout) {
+                if (typeof (time) !== "undefined" && counter > time / timeout) {
                     let error = new Error("Property not set in time");
                     reject(error);
                 }
@@ -28,17 +28,16 @@ export function propertyHelperLibaries<T>(scope: Object, path: string, time: num
     } catch (error) {
 
         return waitOnDefined<T>(scope, path, time)
-        .catch((error) => {
-            if (typeof(defaultReturn)!=="undefined") {
-                return defaultReturn;
-            }
-            throw error;
-        });
+            .catch((error) => {
+                if (typeof (defaultReturn) !== "undefined") {
+                    return defaultReturn;
+                }
+                throw error;
+            });
     }
 }
 
-export function propertyHelperContent<T>(
-    scope: Object, path: string, searchString: string, time: number, defaultReturn?: T): Promise<T> | T {
+export function propertyHelperContent<T>(scope: Object, path: string, searchString: string, time: number, defaultReturn?: T): Promise<T> | T {
 
     let result: T;
     try {
@@ -50,20 +49,20 @@ export function propertyHelperContent<T>(
 
         return new Promise((resolve, reject) => {
             waitOnDefined<T>(scope, path, time)
-            .then((res) => {
-                return resolve(getContentByLibaryName(res, searchString));
-            })
-            .catch((error) => {
-                if (typeof(defaultReturn)!=="undefined") {
-                    return defaultReturn;
-                }
-                throw error;
-            });
+                .then((res) => {
+                    return resolve(getContentByLibaryName(res, searchString));
+                })
+                .catch((error) => {
+                    if (typeof (defaultReturn) !== "undefined") {
+                        return defaultReturn;
+                    }
+                    throw error;
+                });
         });
     }
 }
 
-function getContentByLibaryName(result:any, searchString: string) {
+function getContentByLibaryName(result: any, searchString: string) {
     for (const library of result as any) {
         if (library.value === searchString) {
             return library.content;
@@ -78,7 +77,7 @@ function getProperty<T>(scope: Object, path: string): T {
         if (!scope.hasOwnProperty(property)) {
             propertyPathDefined = false;
         }
-        if(propertyPathDefined) {
+        if (propertyPathDefined) {
             scope = scope[property];
         }
     }
