@@ -123,6 +123,12 @@ let properties = {
                             }, {
                                 value: "xlsx",
                                 label: "Excel"
+                            }, {
+                                value: "docx",
+                                label: "Word"
+                            }, {
+                                value: "pptx",
+                                label: "PowerPoint"
                             }],
                             defaultValue: "pdf"
                         },
