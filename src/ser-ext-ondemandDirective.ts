@@ -622,8 +622,6 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             },
             compile: (): void => {
                 utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
-                    directives.IdentifierDirectiveFactory(rootNameSpace), "Identifier");
-                utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
                     directives.ShortCutDirectiveFactory(rootNameSpace), "Shortcut");
             }
         };
