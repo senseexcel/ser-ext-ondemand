@@ -102,12 +102,16 @@ class OnDemandController implements ng.IController {
                         let distributeObject: IDistribute = JSON.parse(this.distribute);
                         this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
+                            if (!hubResult.link) {
+                                throw "Empty Downloadlink";
+                            }
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
                             }
                         }
                     } catch (error) {
                         this.state = ESERState.error;
+                        break;
                     }
                     if (this.properties.directDownload) {
                         this.action();

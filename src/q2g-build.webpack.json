@@ -1,6 +1,6 @@
 {
     "entryFile": "./ser-ext-ondemand.ts",
-    "outFileName": "ser-ext-ondemand",
+    "outFileName": "agr-ext-ondemand",
     "outputDirectory": "./dist",
     "tsConfigFile": "q2g-build.tsconfig.json",
     "watch": true,

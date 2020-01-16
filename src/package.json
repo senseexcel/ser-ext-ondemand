@@ -1,6 +1,6 @@
 {
-  "name": "ser-ext-ondemand",
-  "version": "1.0.0",
+  "name": "agr-ext-ondemand",
+  "version": "4.5.0-beta-1",
   "license": "MIT",
   "description": "extension to create a on demand from a sense application",
   "repository": {
@@ -26,13 +26,13 @@
     "q2g-build:prod": "node node_modules/q2g-build --builder extension --env production --config q2g-build.webpack.json"
   },
   "qext": {
-    "name": "ser - On Demand Sense Report",
+    "name": "AnalyticsGate on Demand Report",
     "icon": "filterpane",
     "keywords": "qlik-sense, visualization",
     "dependencies": {
       "qlik-sense": ">=3.2.x"
     },
-    "id": "ser-ext-ondemand",
+    "id": "agr-ext-ondemand",
     "type": "visualization"
   }
 }
