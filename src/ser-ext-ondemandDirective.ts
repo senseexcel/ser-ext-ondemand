@@ -41,6 +41,7 @@ class OnDemandController implements ng.IController {
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
+    private readyStateCounter = 0
     //#endregion
 
     //#region logger
@@ -67,7 +68,13 @@ class OnDemandController implements ng.IController {
     }
     public set state(v: ESERState) {
         if (v !== this._state) {
-            this.logger.debug("STATE: ", v);
+            this.logger.debug("STATE: ", ESERState[v]);
+
+            if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
+                this.logger.debug("in old state status will be fall back to starting");
+                this.readyStateCounter++;
+                return;
+            }
 
             if (this.noPropertiesSet) {
                 v = ESERState.noProperties;
@@ -91,6 +98,7 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case ESERState.running:
+                    this.readyStateCounter = 0;
                     this.interactOptions(false, true, false);
                     this.title = "Running ... (click to abort)";
                     break;
