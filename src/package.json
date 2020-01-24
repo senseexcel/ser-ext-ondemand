@@ -18,7 +18,7 @@
     "typescript": "3.7.2"
   },
   "dependencies": {
-    "davinci.js": "1.4.5",
+    "davinci.js": "1.5.1",
     "ser.api": "3.4.2"
   },
   "scripts": {
