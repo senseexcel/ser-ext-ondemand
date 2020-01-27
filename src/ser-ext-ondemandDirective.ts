@@ -308,14 +308,14 @@ class OnDemandController implements ng.IController {
         };
 
         switch (this.properties.selection) {
-            case 0:
+            case 1:
                 connection = {
                     app: this.app.appId,
                     identities: [""]
                 };
                 break;
 
-            case 1:
+            case 0:
                 connection = {
                     app: this.app.appId
                 };
@@ -362,7 +362,7 @@ class OnDemandController implements ng.IController {
         this.logger.debug("fcn: start");
         this.state = ESERState.starting;
 
-        if (this.properties.selection !== 1) {
+        if (this.properties.selection !== 0) {
             this.runSerStartCommand("")
                 .catch((error) => {
                     this.logger.error("ERROR in createReport", error);

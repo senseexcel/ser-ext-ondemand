@@ -140,11 +140,11 @@ let properties = {
                             options: [
                                 {
                                     value: 0,
-                                    label: "Selection over shared session"
+                                    label: "Selection over bookmark"
                                 },
                                 {
                                     value: 1,
-                                    label: "Selection over bookmark"
+                                    label: "Selection over shared session (experimental)"
                                 },
                                 {
                                     value: 2,
@@ -259,6 +259,7 @@ class OnDemandExtension {
     //#endregion
 
     constructor(scope: utils.IVMScope<OnDemandExtension>) {
+        console.log("TEST - 1")
         this.logger.info(`onDemandExtension loaded and uses daVinci Version ${version}`, "");
 
         this.scope = scope;
