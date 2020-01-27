@@ -6,7 +6,7 @@
     }
   ],
   "baseBranches": [
-    "devlopment"
+    "development"
   ],
   "assignees": ["thomashaenig"],
   "automerge": false,
