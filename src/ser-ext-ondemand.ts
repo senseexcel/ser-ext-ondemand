@@ -1,8 +1,8 @@
 //#region Imports
 import * as qvangular from "qvangular";
 import * as qlik from "qlik";
-import * as template from "text!./ser-ext-ondemand.html";
-import * as aboutTemplate from "text!./lib/about.html";
+import template from "./ser-ext-ondemand.html";
+import aboutTemplate from "./lib/about.html";
 
 import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
