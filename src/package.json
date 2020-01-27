@@ -21,16 +21,15 @@
     }
   ],
   "devDependencies": {
-    "@types/angular": "1.6.56",
-    "@types/node": "10.17.5",
+    "@types/angular": "1.6.57",
     "@types/jquery": "3.3.31",
+    "@types/node": "10.17.13",
     "@types/qlik-engineapi": "12.67.8",
     "@types/qlik-visualizationextensions": "4.0.4",
-    "q2g-build": "1.3.2",
-    "typescript": "3.7.2"
+    "q2g-build": "2.0.7"
   },
   "dependencies": {
-    "davinci.js": "1.4.5",
+    "davinci.js": "1.5.1",
     "ser.api": "3.4.2"
   },
   "scripts": {

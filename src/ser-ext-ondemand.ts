@@ -24,6 +24,7 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFac
 
 interface IVMScopeExtended extends utils.IVMScope<OnDemandExtension> {
     layout: ILayout;
+    vm: OnDemandExtension;
 }
 
 let propertyScope: utils.IVMScope<OnDemandExtension>;
