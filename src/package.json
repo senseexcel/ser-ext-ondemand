@@ -1,20 +1,32 @@
 {
-  "name": "agr-ext-ondemand",
-  "version": "4.5.0-beta-1",
+  "name": "ser-ext-ondemand",
+  "version": "4.5.0",
   "license": "MIT",
   "description": "extension to create a on demand from a sense application",
   "repository": {
     "type": "git",
     "url": "https://github.com/senseexcel/ser-ext-ondemand"
   },
-  "author": "Thomas Häning, Konrad Mattheis (qlik2go) ",
+  "author": "akquinet",
+  "contributors": [
+    {
+      "name": "Thomas Hänig",
+      "email": "thomas.haenig@akquinet.de"
+    },
+    {
+      "name": "Ralf Hannuschka"
+    },
+    {
+      "name": "Konrad Mattheis"
+    }
+  ],
   "devDependencies": {
     "@types/angular": "1.6.57",
     "@types/jquery": "3.3.31",
     "@types/node": "10.17.13",
     "@types/qlik-engineapi": "12.67.8",
     "@types/qlik-visualizationextensions": "4.0.4",
-    "q2g-build": "^2.0.7"
+    "q2g-build": "2.0.7"
   },
   "dependencies": {
     "davinci.js": "1.5.1",
@@ -25,13 +37,13 @@
     "q2g-build:prod": "node node_modules/q2g-build --builder extension --env production --config q2g-build.webpack.json"
   },
   "qext": {
-    "name": "AnalyticsGate on Demand Report",
+    "name": "ser - On Demand Sense Report",
     "icon": "filterpane",
     "keywords": "qlik-sense, visualization",
     "dependencies": {
       "qlik-sense": ">=3.2.x"
     },
-    "id": "agr-ext-ondemand",
+    "id": "ser-ext-ondemand",
     "type": "visualization"
   }
 }
