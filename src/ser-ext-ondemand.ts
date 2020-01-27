@@ -260,7 +260,6 @@ class OnDemandExtension {
     //#endregion
 
     constructor(scope: utils.IVMScope<OnDemandExtension>) {
-        console.log("TEST - 1")
         this.logger.info(`onDemandExtension loaded and uses daVinci Version ${version}`, "");
 
         this.scope = scope;
