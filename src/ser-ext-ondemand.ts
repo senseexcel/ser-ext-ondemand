@@ -2,6 +2,7 @@
 import * as qvangular from "qvangular";
 import * as qlik from "qlik";
 import * as template from "text!./ser-ext-ondemand.html";
+import * as aboutTemplate from "text!./lib/about.html";
 
 import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
@@ -23,6 +24,7 @@ utils.checkDirectiveIsRegistrated($injector, qvangular, "", OnDemandDirectiveFac
 
 interface IVMScopeExtended extends utils.IVMScope<OnDemandExtension> {
     layout: ILayout;
+    vm: OnDemandExtension;
 }
 
 let propertyScope: utils.IVMScope<OnDemandExtension>;
@@ -193,6 +195,23 @@ let properties = {
                             }],
                             defaultValue: 3
                         },
+                    }
+                },
+                infos: {
+                    type: "items",
+                    label: "Info",
+                    items: {
+                        serAbout: {
+                            label: function (a) {
+                                const message = $("div[tid='serAbout']")
+                                .find(".message");
+                                if (message.length&&(!message[0].innerText||message[0].innerText==="")) {
+                                    message.html(aboutTemplate);
+                                }
+                            }, 
+                            type:"string",
+                            component: "text"
+                        }
                     }
                 }
             }

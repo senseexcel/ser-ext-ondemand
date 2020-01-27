@@ -41,6 +41,7 @@ class OnDemandController implements ng.IController {
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
+    private readyStateCounter = 0
     //#endregion
 
     //#region logger
@@ -67,7 +68,13 @@ class OnDemandController implements ng.IController {
     }
     public set state(v: ESERState) {
         if (v !== this._state) {
-            this.logger.debug("STATE: ", v);
+            this.logger.debug("STATE: ", ESERState[v]);
+
+            if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
+                this.logger.debug("in old state status will be fall back to starting");
+                this.readyStateCounter++;
+                return;
+            }
 
             if (this.noPropertiesSet) {
                 v = ESERState.noProperties;
@@ -91,6 +98,7 @@ class OnDemandController implements ng.IController {
                     break;
 
                 case ESERState.running:
+                    this.readyStateCounter = 0;
                     this.interactOptions(false, true, false);
                     this.title = "Running ... (click to abort)";
                     break;
@@ -102,12 +110,16 @@ class OnDemandController implements ng.IController {
                         let distributeObject: IDistribute = JSON.parse(this.distribute);
                         this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
+                            if (!hubResult.link) {
+                                throw "Empty Downloadlink";
+                            }
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
                             }
                         }
                     } catch (error) {
                         this.state = ESERState.error;
+                        break;
                     }
                     if (this.properties.directDownload) {
                         this.action();
@@ -621,8 +633,6 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
                 editMode: "<?"
             },
             compile: (): void => {
-                utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
-                    directives.IdentifierDirectiveFactory(rootNameSpace), "Identifier");
                 utils.checkDirectiveIsRegistrated($injector, $registrationProvider, rootNameSpace,
                     directives.ShortCutDirectiveFactory(rootNameSpace), "Shortcut");
             }
