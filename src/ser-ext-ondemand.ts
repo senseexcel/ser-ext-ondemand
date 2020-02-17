@@ -141,17 +141,17 @@ let properties = {
                             options: [
                                 {
                                     value: 0,
-                                    label: "Selection over bookmark"
+                                    label: "Selection over shared session (experimental)"
                                 },
                                 {
                                     value: 1,
-                                    label: "Selection over shared session (experimental)"
+                                    label: "Selection over bookmark"
                                 },
                                 {
                                     value: 2,
                                     label: "not Use"
                                 },],
-                            defaultValue: 0
+                            defaultValue: 1
                         },
                         directDownload: {
                             type: "boolean",
