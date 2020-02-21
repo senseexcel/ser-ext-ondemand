@@ -2,11 +2,12 @@
 import "css!./ser-ext-ondemandDirective.css";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import { isNull, isNullOrUndefined } from "util";
-import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
+import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate } from "./node_modules/ser.api/index";
-import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, IGenericBookmarkExtended, ISERRequestStatus, ILibrary, IGenericBookmarkLayoutMetaExtended, INxAppPropertiesExtended, IDistribute } from "./lib/interfaces";
-import { ESERState, EVersionOption, ESerResponseStatus } from "./lib/enums";
+import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
+import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
+import { LoggerSing } from "./lib/singelton/loggerService";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -27,7 +28,7 @@ class OnDemandController implements ng.IController {
     private intervalShort: number = 3000;
     private intervalLong: number = 6000;
     private links: string[];
-    private noPropertiesSet: boolean = true;
+    private noPropertiesSet: boolean = false;
     private properties: IProperties = {
         template: " ",
         output: " ",
@@ -42,20 +43,7 @@ class OnDemandController implements ng.IController {
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
     private readyStateCounter = 0
-    //#endregion
-
-    //#region logger
-    private _logger: logging.Logger;
-    private get logger(): logging.Logger {
-        if (!this._logger) {
-            try {
-                this._logger = new logging.Logger("OnDemandController");
-            } catch (error) {
-                console.error("ERROR in create logger instance", error);
-            }
-        }
-        return this._logger;
-    }
+    private logger: LoggerSing;
     //#endregion
 
     //#region state
@@ -68,7 +56,7 @@ class OnDemandController implements ng.IController {
     }
     public set state(v: ESERState) {
         if (v !== this._state) {
-            this.logger.debug("STATE: ", ESERState[v]);
+            this.logger.trace("new STATE: ", ESERState[v]);
 
             if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
                 this.logger.debug("in old state status will be fall back to starting");
@@ -76,7 +64,7 @@ class OnDemandController implements ng.IController {
                 return;
             }
 
-            if (this.noPropertiesSet) {
+            if (this.noPropertiesSet && v != ESERState.errorInsufficentRights) {
                 v = ESERState.noProperties;
             }
 
@@ -84,6 +72,11 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
+            if (this.state === ESERState.error) {
+                v = ESERState.error;
+            }
+
+            this.logger.debug("set STATE: ", ESERState[v]);
             this._state = v;
             switch (v) {
 
@@ -153,6 +146,11 @@ class OnDemandController implements ng.IController {
                     this.title = "no Link found - retry generation"
                     break;
 
+                case ESERState.errorInsufficentRights:
+                    this.interactOptions(true, false, true);
+                    this.title = "insufficient rights check console"
+                    break;
+
                 default:
                     this.interactOptions(false, false, false);
                     this.title = "Error while running - Retry";
@@ -177,8 +175,8 @@ class OnDemandController implements ng.IController {
 
                 this.app.getUsername()
                     .then((res) => {
-                        this.logger.info(this.username);
                         this.username = res;
+                        this.logger.info(this.username);
                     })
                     .catch((error) => {
                         this.logger.error("error in setter of model", error);
@@ -236,7 +234,22 @@ class OnDemandController implements ng.IController {
         this.logger.debug("CHANGE REGISTRATED", "");
 
         value.getProperties()
-            .then((res) => {
+            .then(async (res) => {
+                const properties: IProperties = res.propertie
+                if (typeof(properties.loglevel) !== "undefined") {
+                    this.logger.setLogLvl(properties.loglevel)
+                }
+                await this.extractObjectProperties(res.properties)
+                if (properties.selection === ESelectionMode.bookmark) {
+                    let a = await this.app.sufficientRightsBookmark(["read", "delete", "update"]);
+                    if (!a) {
+                        this.state = ESERState.errorInsufficentRights;
+                        this.logger.warn("insufficient Rights for using bookmarks as connection type, please che you Security Rules");
+                        this.clearInterval();
+                        return;
+                    }
+                }
+
                 if ((typeof (this.tempContentLibIndex) !== "undefined"
                     && this.tempContentLibIndex !== res.properties.templateContentLibrary)
                     || !this.checkIfTemplateExistsAsContent(res.properties.template)) {
@@ -251,7 +264,6 @@ class OnDemandController implements ng.IController {
                     this.noPropertiesSet = false;
                     this.getStatus(this.taskId);
                 }
-                return this.extractObjectProperties(res.properties)
             })
             .catch((error) => {
                 this.logger.error("ERROR in setter of model ", error);
@@ -366,6 +378,7 @@ class OnDemandController implements ng.IController {
             this.runSerStartCommand("")
                 .catch((error) => {
                     this.logger.error("ERROR in createReport", error);
+                    this.state = ESERState.error;
                 });
         } else {
             this.app.createBookmark(this.tagName, this.app.appIsPublic)
@@ -374,6 +387,7 @@ class OnDemandController implements ng.IController {
                 })
                 .catch((error) => {
                     this.logger.error("ERROR in createReport", error);
+                    this.state = ESERState.error;
                 });
         }
     }
@@ -628,6 +642,7 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             controllerAs: "vm",
             scope: {},
             bindToController: {
+                logger: "<",
                 model: "<",
                 libraryContent: "<",
                 editMode: "<?"

@@ -8,7 +8,8 @@ export enum ESERState {
     noProperties,
     stopping,
     starting,
-    errorNoLinkFound
+    errorNoLinkFound,
+    errorInsufficentRights
 }
 
 export enum ESerResponseStatus {
@@ -27,4 +28,10 @@ export enum EVersionOption {
 
 export enum ETaskOption {
     all
+}
+
+export enum ESelectionMode {
+    sharedSession = 0,
+    bookmark = 1,
+    notUse = 2
 }

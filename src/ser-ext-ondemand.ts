@@ -7,8 +7,9 @@ import aboutTemplate from "./lib/about.html";
 import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
 import { ILibrary, ILayout } from "./lib/interfaces";
-import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
+import { utils, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { isNull } from "util";
+import { LoggerSing } from "./lib/singelton/loggerService";
 //#endregion
 
 //#region registrate services
@@ -224,20 +225,7 @@ class OnDemandExtension {
     model: EngineAPI.IGenericObject;
     scope: any;
     content: ILibrary[];
-
-    //#region logger
-    private _logger: logging.Logger;
-    private get logger(): logging.Logger {
-        if (!this._logger) {
-            try {
-                this._logger = new logging.Logger("OnDemandExtension");
-            } catch (error) {
-                console.error("ERROR in create logger instance", error);
-            }
-        }
-        return this._logger;
-    }
-    //#endregion
+    logger: LoggerSing;
 
     //#region mode
     private _mode: boolean;
@@ -259,7 +247,8 @@ class OnDemandExtension {
     }
     //#endregion
 
-    constructor(scope: utils.IVMScope<OnDemandExtension>) {
+    constructor(scope: utils.IVMScope<OnDemandExtension>, logger: LoggerSing) {
+        this.logger = logger;
         this.logger.info(`onDemandExtension loaded and uses daVinci Version ${version}`, "");
 
         this.scope = scope;
@@ -355,13 +344,9 @@ export = {
         // empty function to avoid braking when resize method is required
     },
     controller: ["$scope", function (scope: IVMScopeExtended) {
-
-        //#region Logger
-        logging.LogConfig.SetLogLevel("*", scope.layout.properties.loglevel);
-        let logger = new logging.Logger("Main");
-        //#endregion
+        let logger = new LoggerSing(scope.layout.properties.loglevel);
 
         propertyScope = scope;
-        scope.vm = new OnDemandExtension(scope);
+        scope.vm = new OnDemandExtension(scope, logger);
     }]
 };
