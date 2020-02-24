@@ -72,7 +72,7 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
-            if (this.state === ESERState.error) {
+            if (this.state === ESERState.error && v !== ESERState.running && v !== ESERState.starting) {
                 v = ESERState.error;
             }
 
@@ -104,13 +104,14 @@ class OnDemandController implements ng.IController {
                         this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
                             if (!hubResult.link) {
-                                throw "Empty Downloadlink";
+                                throw "Empty Downloadlink, please check SecRules";
                             }
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
                             }
                         }
                     } catch (error) {
+                        this.logger.error("error in setter of state: ", error);
                         this.state = ESERState.error;
                         break;
                     }
@@ -230,44 +231,44 @@ class OnDemandController implements ng.IController {
         this.hasError = hasError;
     }
 
-    private modelChanged(value: EngineAPI.IGenericObject): void {
+    private async modelChanged(model: EngineAPI.IGenericObject): Promise<void> {
         this.logger.debug("CHANGE REGISTRATED", "");
 
-        value.getProperties()
-            .then(async (res) => {
-                const properties: IProperties = res.propertie
-                if (typeof(properties.loglevel) !== "undefined") {
-                    this.logger.setLogLvl(properties.loglevel)
-                }
-                await this.extractObjectProperties(res.properties)
-                if (properties.selection === ESelectionMode.bookmark) {
-                    let a = await this.app.sufficientRightsBookmark(["read", "delete", "update"]);
-                    if (!a) {
-                        this.state = ESERState.errorInsufficentRights;
-                        this.logger.warn("insufficient Rights for using bookmarks as connection type, please che you Security Rules");
-                        this.clearInterval();
-                        return;
-                    }
-                }
+        try {
+            const objectProperties = await model.getProperties()
+            const properties: IProperties = objectProperties.properties
 
-                if ((typeof (this.tempContentLibIndex) !== "undefined"
-                    && this.tempContentLibIndex !== res.properties.templateContentLibrary)
-                    || !this.checkIfTemplateExistsAsContent(res.properties.template)) {
-                    res.properties.template = null;
+            if (typeof(properties) !== "undefined" && typeof(properties.loglevel) !== "undefined") {
+                this.logger.setLogLvl(properties.loglevel)
+            }
+            await this.extractObjectProperties(properties)
+            if (properties.selection === ESelectionMode.bookmark) {
+                let a = await this.app.sufficientRightsBookmark(["read", "delete", "update"]);
+                if (!a) {
+                    this.state = ESERState.errorInsufficentRights;
+                    this.logger.warn("insufficient Rights for using bookmarks as connection type, please che you Security Rules");
+                    this.clearInterval();
+                    return;
                 }
-                this.tempContentLibIndex = res.properties.templateContentLibrary;
+            }
 
-                if (isNull(res.properties.template)) {
-                    this.noPropertiesSet = true;
-                    this.state = ESERState.noProperties;
-                } else {
-                    this.noPropertiesSet = false;
-                    this.getStatus(this.taskId);
-                }
-            })
-            .catch((error) => {
-                this.logger.error("ERROR in setter of model ", error);
-            });
+            if ((typeof (this.tempContentLibIndex) !== "undefined"
+            && this.tempContentLibIndex !== properties.templateContentLibrary)
+            || !this.checkIfTemplateExistsAsContent(properties.template)) {
+                properties.template = null;
+            }
+            this.tempContentLibIndex = properties.templateContentLibrary;
+
+            if (isNull(properties.template)) {
+                this.noPropertiesSet = true;
+                this.state = ESERState.noProperties;
+            } else {
+                this.noPropertiesSet = false;
+                this.getStatus(this.taskId);
+            }
+        } catch (error) {
+            this.logger.error("ERROR in fcn modelChanged() ", error);
+        }
     }
 
     private checkIfTemplateExistsAsContent(template: string): boolean {
