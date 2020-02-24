@@ -1,5 +1,8 @@
 import { INxAppPropertiesExtended, IGenericBookmarkLayoutMetaExtended, IGenericBookmarkExtended } from "./interfaces";
 
+interface IMetaBookmarkExtended extends EngineAPI.INxMetaTitleDescription {
+    privileges: string[]
+}
 export class AppObject {
 
     private app: EngineAPI.IApp;
@@ -190,4 +193,33 @@ export class AppObject {
                 });
         });
     }
+
+    public async sufficientRightsBookmark(rights: string[]): Promise<boolean> {
+
+        const title = "SerOnDemandCheckRightBookmark";
+        let checker = true;
+
+        let bookmarkProperties: EngineAPI.IGenericBookmarkProperties = {
+            qInfo: {
+                qType: "hiddenbookmark"
+            },
+            qMetaDef: {
+                title: title,
+                approved: false
+            },
+            creationDate: (new Date()).toISOString()
+        };
+
+        const bookmarkObject = await this.app.createBookmark(bookmarkProperties);
+        const bookmarkLayout = await bookmarkObject.getLayout();
+
+        rights.forEach((right) => {
+            if ((bookmarkLayout.qMeta as IMetaBookmarkExtended).privileges.indexOf(right) === -1) {
+                checker = false;
+            }
+        });
+        await this.app.destroyBookmark(bookmarkLayout.qInfo.qId);
+        return checker;
+    }
+
 }
