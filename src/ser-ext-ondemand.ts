@@ -198,6 +198,25 @@ let properties = {
                         },
                     }
                 },
+                options: {
+                    type: "items",
+                    label: "Options",
+                    grouped: true,
+                    items: {
+                        calculationConditionFcn: {
+                            ref: "properties.calculationConditionFcn",
+                            label: "Calculation Condition",
+                            type: "string",
+                            expression: "optional"
+                        },
+                        calculationConditionText: {
+                            ref: "properties.calculationConditionText",
+                            label: "Text",
+                            type: "string",
+                            component: "textarea"
+                        }
+                    }
+                },
                 infos: {
                     type: "items",
                     label: "Info",
@@ -226,6 +245,8 @@ class OnDemandExtension {
     scope: any;
     content: ILibrary[];
     logger: LoggerSing;
+    checkCalcCond: boolean = false;
+    calcText: string = "";
 
     //#region mode
     private _mode: boolean;
@@ -262,6 +283,38 @@ class OnDemandExtension {
                 this.logger.error("ERROR in constructor of OnDemandExtension", error);
             });
 
+        this.model.on("changed", async () => {
+            const objectProperties = await this.model.getProperties()
+            let calcFcn = objectProperties.properties.calculationConditionFcn;
+            let calcText: string = objectProperties.properties.calculationConditionText;
+
+            if (calcText.length === 0) {
+                calcText = "calculation condition not fulfilled";
+            }
+
+            try {
+                if (typeof((calcFcn as any).qStringExpression) !== "undefined") {
+                let a = (calcFcn as any).qStringExpression.qExpr
+                let b = await this.model.app.evaluateEx(a);
+
+                    if (b.qNumber === -1) {
+                        this.logger.debug("calculation condition fulfilled")
+                        this.checkCalcCond = true;
+                    } else {
+                        this.logger.debug("calculation condition not fullfilled")
+                        this.calcText = calcText;
+                        this.checkCalcCond = false;
+                    }
+                } else {
+                    this.logger.trace("no calculation condition set")
+                    this.checkCalcCond = true;
+                }
+            } catch (error) {
+                this.checkCalcCond = true;
+                this.logger.error("Error in constructor of ser-ext-ondemand")
+            }
+        });
+        this.model.emit("changed");
     }
 
     /**
