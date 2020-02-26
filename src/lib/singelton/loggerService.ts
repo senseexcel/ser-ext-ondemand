@@ -18,7 +18,6 @@ export class LoggerSing extends Logger
                 }
             ]
         })
-        // new Logger();
     }
 
     public static get Instance()

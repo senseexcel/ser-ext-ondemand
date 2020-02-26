@@ -22,13 +22,13 @@ class OnDemandController implements ng.IController {
 
     private distribute: any;
     private app: AppObject;
-    private tagName: string = "SER";
+    private tagName = "SER";
     private host: string;
     private interval: number;
-    private intervalShort: number = 3000;
-    private intervalLong: number = 6000;
+    private intervalShort = 3000;
+    private intervalLong = 6000;
     private links: string[];
-    private noPropertiesSet: boolean = false;
+    private noPropertiesSet = false;
     private properties: IProperties = {
         template: " ",
         output: " ",
@@ -38,7 +38,7 @@ class OnDemandController implements ng.IController {
     private username: string;
     private tempContentLibIndex: number;
     private taskId: string;
-    private timeoutAfterStop: number = 2000;
+    private timeoutAfterStop = 2000;
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
@@ -432,6 +432,7 @@ class OnDemandController implements ng.IController {
                     resolve();
                 })
                 .catch((error) => {
+                    this.logger.error("ERROR", error);
                     reject(error);
                 });
         });
@@ -447,6 +448,7 @@ class OnDemandController implements ng.IController {
                 this.properties.directDownload = properties.directDownload;
                 resolve();
             } catch (error) {
+                this.logger.error("ERROR", error);
                 reject(error);
             }
         });

@@ -213,11 +213,8 @@ export class AppObject {
         const bookmarkObject = await this.app.createBookmark(bookmarkProperties);
         const bookmarkLayout = await bookmarkObject.getLayout();
 
-        rights.forEach((right) => {
-            if ((bookmarkLayout.qMeta as IMetaBookmarkExtended).privileges.indexOf(right) === -1) {
-                checker = false;
-            }
-        });
+        checker = !rights.some((right) => (bookmarkLayout.qMeta as IMetaBookmarkExtended).privileges.indexOf(right) === -1);
+
         await this.app.destroyBookmark(bookmarkLayout.qInfo.qId);
         return checker;
     }
