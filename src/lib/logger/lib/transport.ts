@@ -21,8 +21,4 @@ export class BaseTransport {
 
 export class DefaultConsolTransport extends BaseTransport {
     type: ETransportType = ETransportType.console;
-
-    constructor(baseTransport?: BaseTransport) {
-        super(baseTransport);
-    }
 }

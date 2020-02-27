@@ -116,11 +116,11 @@ class Logger implements ILogger {
                 let loglvl = typeof (transport.loglvl) !== "undefined" ? transport.loglvl :
                     (typeof (config.loglvl) !== "undefined" ? config.loglvl : null);
 
-                mergedTransport.baseComment = base === null ? mergedTransport.baseComment : base;
-                mergedTransport.loglvl = loglvl === null ? mergedTransport.loglvl : loglvl;
-                mergedTransport.showBaseComment = transport.showBaseComment ? transport.showBaseComment : mergedTransport.showBaseComment;
-                mergedTransport.showDate = transport.showDate ? transport.showDate : mergedTransport.showDate;
-                mergedTransport.showLoglevel = transport.showLoglevel ? transport.showLoglevel : mergedTransport.showLoglevel;
+                mergedTransport.baseComment = base ?? mergedTransport.baseComment;
+                mergedTransport.loglvl = loglvl ?? mergedTransport.loglvl;
+                mergedTransport.showBaseComment = transport.showBaseComment ?? mergedTransport.showBaseComment;
+                mergedTransport.showDate = transport.showDate ?? mergedTransport.showDate;
+                mergedTransport.showLoglevel = transport.showLoglevel ?? mergedTransport.showLoglevel;
 
                 mergedTransport = new DefaultConsolTransport(mergedTransport);
 

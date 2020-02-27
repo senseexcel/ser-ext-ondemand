@@ -7,7 +7,7 @@ import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate } from "./node
 import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
 import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
-import { LoggerSing } from "./lib/singelton/loggerService";
+import { Logger } from "./lib/logger/index";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -19,16 +19,17 @@ class OnDemandController implements ng.IController {
     hasError: boolean = false;
     clickable: boolean = true;
     title: string = "Generate Report";
+    logger: Logger;
 
     private distribute: any;
     private app: AppObject;
-    private tagName: string = "SER";
+    private tagName = "SER";
     private host: string;
     private interval: number;
-    private intervalShort: number = 3000;
-    private intervalLong: number = 6000;
+    private intervalShort = 3000;
+    private intervalLong = 6000;
     private links: string[];
-    private noPropertiesSet: boolean = false;
+    private noPropertiesSet = false;
     private properties: IProperties = {
         template: " ",
         output: " ",
@@ -38,12 +39,11 @@ class OnDemandController implements ng.IController {
     private username: string;
     private tempContentLibIndex: number;
     private taskId: string;
-    private timeoutAfterStop: number = 2000;
+    private timeoutAfterStop = 2000;
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
     private readyStateCounter = 0
-    private logger: LoggerSing;
     //#endregion
 
     //#region state
@@ -432,6 +432,7 @@ class OnDemandController implements ng.IController {
                     resolve();
                 })
                 .catch((error) => {
+                    this.logger.error("ERROR", error);
                     reject(error);
                 });
         });
@@ -447,6 +448,7 @@ class OnDemandController implements ng.IController {
                 this.properties.directDownload = properties.directDownload;
                 resolve();
             } catch (error) {
+                this.logger.error("ERROR", error);
                 reject(error);
             }
         });
