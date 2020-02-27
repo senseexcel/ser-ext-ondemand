@@ -118,9 +118,9 @@ class Logger implements ILogger {
 
                 mergedTransport.baseComment = base ?? mergedTransport.baseComment;
                 mergedTransport.loglvl = loglvl ?? mergedTransport.loglvl;
-                mergedTransport.showBaseComment = transport.showBaseComment ?? transport.showBaseComment;
-                mergedTransport.showDate = transport.showDate ?? transport.showDate;
-                mergedTransport.showLoglevel = transport.showLoglevel ?? transport.showLoglevel;
+                mergedTransport.showBaseComment = transport.showBaseComment ?? mergedTransport.showBaseComment;
+                mergedTransport.showDate = transport.showDate ?? mergedTransport.showDate;
+                mergedTransport.showLoglevel = transport.showLoglevel ?? mergedTransport.showLoglevel;
 
                 mergedTransport = new DefaultConsolTransport(mergedTransport);
 
