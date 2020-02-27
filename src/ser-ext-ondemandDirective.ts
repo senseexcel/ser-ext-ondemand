@@ -7,7 +7,7 @@ import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate } from "./node
 import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
 import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
-import { LoggerSing } from "./lib/singelton/loggerService";
+import { Logger } from "./lib/logger/index";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -19,6 +19,7 @@ class OnDemandController implements ng.IController {
     hasError: boolean = false;
     clickable: boolean = true;
     title: string = "Generate Report";
+    logger: Logger;
 
     private distribute: any;
     private app: AppObject;
@@ -43,7 +44,6 @@ class OnDemandController implements ng.IController {
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
     private readyStateCounter = 0
-    private logger: LoggerSing;
     //#endregion
 
     //#region state
