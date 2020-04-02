@@ -288,7 +288,7 @@ class OnDemandExtension {
             let calcFcn = objectProperties.properties.calculationConditionFcn;
             let calcText: string = objectProperties.properties.calculationConditionText;
 
-            if (calcText.length === 0) {
+            if (!calcText || calcText.length === 0) {
                 calcText = "calculation condition not fulfilled";
             }
 
