@@ -68,7 +68,10 @@ export interface IProperties {
     output: string;
     selection: number;
     directDownload: boolean;
+    templateContentLibrary?: number;
     loglevel?: logging.LogLevel;
+    calculationConditionFcn?: string;
+    calculationConditionText?: string;
 }
 
 export interface INxAppPropertiesExtended extends EngineAPI.INxAppProperties {

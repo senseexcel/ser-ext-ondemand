@@ -7,8 +7,9 @@ import aboutTemplate from "./lib/about.html";
 import { OnDemandDirectiveFactory } from "./ser-ext-ondemandDirective";
 import { propertyHelperLibaries, propertyHelperContent } from "./lib/utils";
 import { ILibrary, ILayout } from "./lib/interfaces";
-import { utils, logging, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
+import { utils, services, version } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { isNull } from "util";
+import { ETransportType, Logger } from "./lib/logger/index";
 //#endregion
 
 //#region registrate services
@@ -197,6 +198,25 @@ let properties = {
                         },
                     }
                 },
+                options: {
+                    type: "items",
+                    label: "Options",
+                    grouped: true,
+                    items: {
+                        calculationConditionFcn: {
+                            ref: "properties.calculationConditionFcn",
+                            label: "Calculation Condition",
+                            type: "string",
+                            expression: "optional"
+                        },
+                        calculationConditionText: {
+                            ref: "properties.calculationConditionText",
+                            label: "Text",
+                            type: "string",
+                            component: "textarea"
+                        }
+                    }
+                },
                 infos: {
                     type: "items",
                     label: "Info",
@@ -224,20 +244,9 @@ class OnDemandExtension {
     model: EngineAPI.IGenericObject;
     scope: any;
     content: ILibrary[];
-
-    //#region logger
-    private _logger: logging.Logger;
-    private get logger(): logging.Logger {
-        if (!this._logger) {
-            try {
-                this._logger = new logging.Logger("OnDemandExtension");
-            } catch (error) {
-                console.error("ERROR in create logger instance", error);
-            }
-        }
-        return this._logger;
-    }
-    //#endregion
+    logger: Logger;
+    checkCalcCond: boolean = false;
+    calcText: string = "";
 
     //#region mode
     private _mode: boolean;
@@ -259,7 +268,8 @@ class OnDemandExtension {
     }
     //#endregion
 
-    constructor(scope: utils.IVMScope<OnDemandExtension>) {
+    constructor(scope: utils.IVMScope<OnDemandExtension>, logger: Logger) {
+        this.logger = logger;
         this.logger.info(`onDemandExtension loaded and uses daVinci Version ${version}`, "");
 
         this.scope = scope;
@@ -273,6 +283,38 @@ class OnDemandExtension {
                 this.logger.error("ERROR in constructor of OnDemandExtension", error);
             });
 
+        this.model.on("changed", async () => {
+            const objectProperties = await this.model.getProperties()
+            let calcFcn = objectProperties.properties.calculationConditionFcn;
+            let calcText: string = objectProperties.properties.calculationConditionText;
+
+            if (!calcText || calcText.length === 0) {
+                calcText = "calculation condition not fulfilled";
+            }
+
+            try {
+                if (typeof((calcFcn as any).qStringExpression) !== "undefined") {
+                let a = (calcFcn as any).qStringExpression.qExpr
+                let b = await this.model.app.evaluateEx(a);
+
+                    if (b.qNumber === -1) {
+                        this.logger.debug("calculation condition fulfilled")
+                        this.checkCalcCond = true;
+                    } else {
+                        this.logger.debug("calculation condition not fullfilled")
+                        this.calcText = calcText;
+                        this.checkCalcCond = false;
+                    }
+                } else {
+                    this.logger.trace("no calculation condition set")
+                    this.checkCalcCond = true;
+                }
+            } catch (error) {
+                this.checkCalcCond = true;
+                this.logger.error("Error in constructor of ser-ext-ondemand")
+            }
+        });
+        this.model.emit("changed");
     }
 
     /**
@@ -356,12 +398,20 @@ export = {
     },
     controller: ["$scope", function (scope: IVMScopeExtended) {
 
-        //#region Logger
-        logging.LogConfig.SetLogLevel("*", scope.layout.properties.loglevel);
-        let logger = new logging.Logger("Main");
-        //#endregion
+        let logger = new Logger({
+            baseComment: "ser-ext-ondemand",
+            loglvl: scope.layout.properties.loglevel,
+            transports: [
+                {
+                    showBaseComment: true,
+                    showDate: true,
+                    showLoglevel: true,
+                    type: ETransportType.console
+                }
+            ]
+        });
 
         propertyScope = scope;
-        scope.vm = new OnDemandExtension(scope);
+        scope.vm = new OnDemandExtension(scope, logger);
     }]
 };
