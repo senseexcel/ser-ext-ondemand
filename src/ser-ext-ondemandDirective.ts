@@ -2,11 +2,12 @@
 import "css!./ser-ext-ondemandDirective.css";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import { isNull, isNullOrUndefined } from "util";
-import { utils, logging, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
+import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate } from "./node_modules/ser.api/index";
-import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, IGenericBookmarkExtended, ISERRequestStatus, ILibrary, IGenericBookmarkLayoutMetaExtended, INxAppPropertiesExtended, IDistribute } from "./lib/interfaces";
-import { ESERState, EVersionOption, ESerResponseStatus } from "./lib/enums";
+import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
+import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
+import { Logger } from "./lib/logger/index";
 //#endregion
 
 class OnDemandController implements ng.IController {
@@ -18,16 +19,17 @@ class OnDemandController implements ng.IController {
     hasError: boolean = false;
     clickable: boolean = true;
     title: string = "Generate Report";
+    logger: Logger;
 
     private distribute: any;
     private app: AppObject;
-    private tagName: string = "SER";
+    private tagName = "SER";
     private host: string;
     private interval: number;
-    private intervalShort: number = 3000;
-    private intervalLong: number = 6000;
+    private intervalShort = 3000;
+    private intervalLong = 6000;
     private links: string[];
-    private noPropertiesSet: boolean = true;
+    private noPropertiesSet = false;
     private properties: IProperties = {
         template: " ",
         output: " ",
@@ -37,25 +39,11 @@ class OnDemandController implements ng.IController {
     private username: string;
     private tempContentLibIndex: number;
     private taskId: string;
-    private timeoutAfterStop: number = 2000;
+    private timeoutAfterStop = 2000;
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
     private readyStateCounter = 0
-    //#endregion
-
-    //#region logger
-    private _logger: logging.Logger;
-    private get logger(): logging.Logger {
-        if (!this._logger) {
-            try {
-                this._logger = new logging.Logger("OnDemandController");
-            } catch (error) {
-                console.error("ERROR in create logger instance", error);
-            }
-        }
-        return this._logger;
-    }
     //#endregion
 
     //#region state
@@ -68,7 +56,7 @@ class OnDemandController implements ng.IController {
     }
     public set state(v: ESERState) {
         if (v !== this._state) {
-            this.logger.debug("STATE: ", ESERState[v]);
+            this.logger.trace("new STATE: ", ESERState[v]);
 
             if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
                 this.logger.debug("in old state status will be fall back to starting");
@@ -76,7 +64,7 @@ class OnDemandController implements ng.IController {
                 return;
             }
 
-            if (this.noPropertiesSet) {
+            if (this.noPropertiesSet && v != ESERState.errorInsufficentRights) {
                 v = ESERState.noProperties;
             }
 
@@ -84,6 +72,11 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
+            if (this.state === ESERState.error && v !== ESERState.running && v !== ESERState.starting) {
+                v = ESERState.error;
+            }
+
+            this.logger.debug("set STATE: ", ESERState[v]);
             this._state = v;
             switch (v) {
 
@@ -111,13 +104,14 @@ class OnDemandController implements ng.IController {
                         this.links = [];
                         for (const hubResult of distributeObject.hubResults) {
                             if (!hubResult.link) {
-                                throw "Empty Downloadlink";
+                                throw "Empty Downloadlink, please check SecRules";
                             }
                             if (hubResult.success) {
                                 this.links.push(`${this.host}${hubResult.link}`)
                             }
                         }
                     } catch (error) {
+                        this.logger.error("error in setter of state: ", error);
                         this.state = ESERState.error;
                         break;
                     }
@@ -153,6 +147,11 @@ class OnDemandController implements ng.IController {
                     this.title = "no Link found - retry generation"
                     break;
 
+                case ESERState.errorInsufficentRights:
+                    this.interactOptions(true, false, true);
+                    this.title = "insufficient rights check console"
+                    break;
+
                 default:
                     this.interactOptions(false, false, false);
                     this.title = "Error while running - Retry";
@@ -177,8 +176,8 @@ class OnDemandController implements ng.IController {
 
                 this.app.getUsername()
                     .then((res) => {
-                        this.logger.info(this.username);
                         this.username = res;
+                        this.logger.info(this.username);
                     })
                     .catch((error) => {
                         this.logger.error("error in setter of model", error);
@@ -232,30 +231,44 @@ class OnDemandController implements ng.IController {
         this.hasError = hasError;
     }
 
-    private modelChanged(value: EngineAPI.IGenericObject): void {
+    private async modelChanged(model: EngineAPI.IGenericObject): Promise<void> {
         this.logger.debug("CHANGE REGISTRATED", "");
 
-        value.getProperties()
-            .then((res) => {
-                if ((typeof (this.tempContentLibIndex) !== "undefined"
-                    && this.tempContentLibIndex !== res.properties.templateContentLibrary)
-                    || !this.checkIfTemplateExistsAsContent(res.properties.template)) {
-                    res.properties.template = null;
-                }
-                this.tempContentLibIndex = res.properties.templateContentLibrary;
+        try {
+            const objectProperties = await model.getProperties()
+            const properties: IProperties = objectProperties.properties
 
-                if (isNull(res.properties.template)) {
-                    this.noPropertiesSet = true;
-                    this.state = ESERState.noProperties;
-                } else {
-                    this.noPropertiesSet = false;
-                    this.getStatus(this.taskId);
+            if (typeof(properties) !== "undefined" && typeof(properties.loglevel) !== "undefined") {
+                this.logger.setLogLvl(properties.loglevel)
+            }
+            await this.extractObjectProperties(properties)
+            if (properties.selection === ESelectionMode.bookmark) {
+                let a = await this.app.sufficientRightsBookmark(["read", "delete", "update"]);
+                if (!a) {
+                    this.state = ESERState.errorInsufficentRights;
+                    this.logger.warn("insufficient Rights for using bookmarks as connection type, please che you Security Rules");
+                    this.clearInterval();
+                    return;
                 }
-                return this.extractObjectProperties(res.properties)
-            })
-            .catch((error) => {
-                this.logger.error("ERROR in setter of model ", error);
-            });
+            }
+
+            if ((typeof (this.tempContentLibIndex) !== "undefined"
+            && this.tempContentLibIndex !== properties.templateContentLibrary)
+            || !this.checkIfTemplateExistsAsContent(properties.template)) {
+                properties.template = null;
+            }
+            this.tempContentLibIndex = properties.templateContentLibrary;
+
+            if (isNull(properties.template)) {
+                this.noPropertiesSet = true;
+                this.state = ESERState.noProperties;
+            } else {
+                this.noPropertiesSet = false;
+                this.getStatus(this.taskId);
+            }
+        } catch (error) {
+            this.logger.error("ERROR in fcn modelChanged() ", error);
+        }
     }
 
     private checkIfTemplateExistsAsContent(template: string): boolean {
@@ -366,6 +379,7 @@ class OnDemandController implements ng.IController {
             this.runSerStartCommand("")
                 .catch((error) => {
                     this.logger.error("ERROR in createReport", error);
+                    this.state = ESERState.error;
                 });
         } else {
             this.app.createBookmark(this.tagName, this.app.appIsPublic)
@@ -374,6 +388,7 @@ class OnDemandController implements ng.IController {
                 })
                 .catch((error) => {
                     this.logger.error("ERROR in createReport", error);
+                    this.state = ESERState.error;
                 });
         }
     }
@@ -417,6 +432,7 @@ class OnDemandController implements ng.IController {
                     resolve();
                 })
                 .catch((error) => {
+                    this.logger.error("ERROR", error);
                     reject(error);
                 });
         });
@@ -432,6 +448,7 @@ class OnDemandController implements ng.IController {
                 this.properties.directDownload = properties.directDownload;
                 resolve();
             } catch (error) {
+                this.logger.error("ERROR", error);
                 reject(error);
             }
         });
@@ -628,6 +645,7 @@ export function OnDemandDirectiveFactory(rootNameSpace: string): ng.IDirectiveFa
             controllerAs: "vm",
             scope: {},
             bindToController: {
+                logger: "<",
                 model: "<",
                 libraryContent: "<",
                 editMode: "<?"

@@ -3,7 +3,12 @@
      class="q2g-ondemand"
      style="height: 100%; position: relative;">
 
-    <q2g-ondemand-extension model="vm.model"
+     <div ng-if="!vm.checkCalcCond" ng-bind-html="vm.calcText">
+     </div>
+
+    <q2g-ondemand-extension ng-if="vm.checkCalcCond"
+                            logger="vm.logger"
+                            model="vm.model"
                             edit-mode="vm.isEditMode()"
                             library-content="vm.content">
     </q2g-ondemand-extension>
