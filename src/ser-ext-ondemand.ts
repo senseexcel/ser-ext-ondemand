@@ -125,7 +125,10 @@ let properties = {
                                 label: "PDF"
                             }, {
                                 value: "xlsx",
-                                label: "Excel"
+                                label: "Excel (xlsx)"
+                            }, {
+                                value: "xlsb",
+                                label: "Excel (xlsb)"
                             }, {
                                 value: "docx",
                                 label: "Word"
