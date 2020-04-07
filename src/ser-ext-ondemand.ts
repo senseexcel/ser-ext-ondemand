@@ -145,12 +145,12 @@ let properties = {
                                     component: "dropdown",
                                     options: [
                                         {
-                                            value: 0,
-                                            label: "Current Selections (shared session - experimantal)"
-                                        },
-                                        {
                                             value: 1,
                                             label: "Current Selections (new session - recommended)"
+                                        },
+                                        {
+                                            value: 0,
+                                            label: "Current Selections (shared session - experimantal)"
                                         },
                                         {
                                             value: 2,
@@ -172,7 +172,7 @@ let properties = {
                                                     <span>This method is experimantal and on some systems not working</span>
                                                     </br>
                                                     </br>
-                                                    <span style="font-weight: bold;">Is not working for Analyser User</span>
+                                                    <span style="font-weight: bold;">Is not working for Analyzer User</span>
                                                 `;
                                                 break;
                                         
