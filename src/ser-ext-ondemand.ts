@@ -125,7 +125,10 @@ let properties = {
                                 label: "PDF"
                             }, {
                                 value: "xlsx",
-                                label: "Excel"
+                                label: "Excel (xlsx)"
+                            }, {
+                                value: "xlsb",
+                                label: "Excel (xlsb)"
                             }, {
                                 value: "docx",
                                 label: "Word"
@@ -136,23 +139,67 @@ let properties = {
                             defaultValue: "pdf"
                         },
                         selection: {
-                            ref: "properties.selection",
-                            label: "Selection Mode",
-                            component: "dropdown",
-                            options: [
-                                {
-                                    value: 0,
-                                    label: "Selection over shared session (experimental)"
+                            type: "items",
+                            grouped: false,
+                            items: {
+                                selectionMode: {
+                                    ref: "properties.selection",
+                                    label: "Selection Mode",
+                                    component: "dropdown",
+                                    options: [
+                                        {
+                                            value: 1,
+                                            label: "Current Selections (new session - recommended)"
+                                        },
+                                        {
+                                            value: 0,
+                                            label: "Current Selections (shared session - experimantal)"
+                                        },
+                                        {
+                                            value: 2,
+                                            label: "Selections embedded in template"
+                                        }
+                                    ],
+                                    defaultValue: 1
                                 },
-                                {
-                                    value: 1,
-                                    label: "Selection over bookmark"
-                                },
-                                {
-                                    value: 2,
-                                    label: "not Use"
-                                },],
-                            defaultValue: 1
+                                selectionModeDesc: {
+                                    label: function (a) {
+                                        let innerHtml = "";
+                                        let message = $("div[tid='selectionModeDesc']")
+                                        .find(".message");
+                                        switch (a.properties.selection) {
+                                            case 0:
+                                                innerHtml = `
+                                                    <span>Reporting connects to the same app session and uses the selections made in the app.</span>
+                                                    </br>
+                                                    <span>This method is experimantal and on some systems not working</span>
+                                                    </br>
+                                                    </br>
+                                                    <span style="font-weight: bold;">Is not working for Analyzer User</span>
+                                                `;
+                                                break;
+                                        
+                                            case 1:
+                                                innerHtml = `
+                                                    <span>Reporting creates new session and the current selections are send to the new session by script</span>
+                                                    </br>
+                                                    </br>
+                                                    <span style="font-weight: bold;">This method is recomended</span>
+                                                `;
+                                                break;
+
+                                            default:
+                                                innerHtml = `
+                                                    <span>Reporting creates new session and takes the selection made in the template</span>
+                                                `;
+                                                break;
+                                        }
+                                        message.html(innerHtml);
+                                    }, 
+                                    type:"string",
+                                    component: "text"
+                                }
+                            }
                         },
                         directDownload: {
                             type: "boolean",
