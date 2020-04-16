@@ -68,6 +68,7 @@ export interface IProperties {
     output: string;
     selection: number;
     directDownload: boolean;
+    maxReportRuntime: number;
     templateContentLibrary?: number;
     loglevel?: logging.LogLevel;
     calculationConditionFcn?: string;

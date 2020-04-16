@@ -30,6 +30,7 @@ class OnDemandController implements ng.IController {
     private links: string[];
     private noPropertiesSet = false;
     private properties: IProperties = {
+        maxReportRuntime: 900,
         template: " ",
         output: " ",
         selection: 1,
@@ -303,7 +304,9 @@ class OnDemandController implements ng.IController {
 
     private async createStartRequest(): Promise<ISERRequestStart> {
         this.logger.debug("fcn: createRequest");
-        let general: ISerGeneral = {};
+        let general: ISerGeneral = {
+            timeout: this.properties.maxReportRuntime
+        };
         let connection: ISerConnection;
         let template: ISerTemplate = {
             input: this.properties.template,
@@ -455,11 +458,22 @@ class OnDemandController implements ng.IController {
     private extractObjectProperties(properties: IProperties): Promise<void> {
         this.logger.debug("fcn: extractProperties");
         return new Promise((resolve, reject) => {
+
+            let timeout: number;
+            try {
+                timeout = (properties.maxReportRuntime<1 ? 15 : properties.maxReportRuntime) * 60;
+                timeout = isNaN(timeout)?900:timeout;
+            } catch (error) {
+                this.logger.warn("timeout could not be calculated from input")
+                timeout = 900;
+            }
+
             try {
                 this.properties.template = properties.template;
                 this.properties.selection = properties.selection;
                 this.properties.output = properties.output;
                 this.properties.directDownload = properties.directDownload;
+                this.properties.maxReportRuntime = timeout;
                 resolve();
             } catch (error) {
                 this.logger.error("ERROR", error);

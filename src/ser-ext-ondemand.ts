@@ -243,6 +243,30 @@ let properties = {
                             }],
                             defaultValue: 3
                         },
+                        expertSettings: {
+                            type: "boolean",
+                            component: "switch",
+                            label: "Activate Expert Settings",
+                            ref: "properties.expertSettings",
+                            options: [{
+                                value: true,
+                                label: "On"
+                            }, {
+                                value: false,
+                                label: "Off"
+                            }],
+                            defaultValue: false
+                        },
+                        maxReportRuntime: {
+                            ref: "properties.maxReportRuntime",
+                            label: "Maximum Report Runtime (Minutes)",
+                            default: 15,
+                            type: "number",
+                            expression: "optional",
+                            show: function(a) {
+                                return a.properties.expertSettings
+                            }
+                        },
                     }
                 },
                 options: {
@@ -335,6 +359,10 @@ class OnDemandExtension {
             let calcFcn = objectProperties.properties.calculationConditionFcn;
             let calcText: string = objectProperties.properties.calculationConditionText;
 
+            if (typeof(calcFcn) === "undefined") {
+                calcFcn = {}
+            }
+
             if (!calcText || calcText.length === 0) {
                 calcText = "calculation condition not fulfilled";
             }
@@ -412,7 +440,7 @@ class OnDemandExtension {
                             let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
                             let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
 
-                            if (last4 === ".xls" || last5 === ".xlsx") {
+                            if (last4 === ".xls" || last5 === ".xlsx" || last5 === ".xlsb" || last5 === ".xlsm") {
                                 let lib = (value.qUrl as string).split("/")[2];
                                 let name = (value.qUrl as string).split("/")[3];
 
