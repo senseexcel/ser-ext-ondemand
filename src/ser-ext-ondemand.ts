@@ -260,7 +260,7 @@ let properties = {
                         maxReportRuntime: {
                             ref: "properties.maxReportRuntime",
                             label: "Maximum Report Runtime (Minutes)",
-                            default: 15,
+                            defaultValue: 15,
                             type: "number",
                             expression: "optional",
                             show: function(a) {

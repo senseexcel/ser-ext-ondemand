@@ -462,7 +462,8 @@ class OnDemandController implements ng.IController {
             let timeout: number;
             try {
                 timeout = (properties.maxReportRuntime<1 ? 15 : properties.maxReportRuntime) * 60;
-                timeout = isNaN(timeout)?900:timeout;
+                timeout = isNaN(timeout) ? 900 : timeout;
+                this.logger.debug("Max report runtime is set to: ", timeout);
             } catch (error) {
                 this.logger.warn("timeout could not be calculated from input")
                 timeout = 900;
