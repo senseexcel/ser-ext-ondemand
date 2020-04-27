@@ -215,34 +215,6 @@ let properties = {
                             }],
                             defaultValue: false
                         },
-                        loglevel: {
-                            ref: "properties.loglevel",
-                            label: "loglevel",
-                            component: "dropdown",
-                            options: [{
-                                value: 0,
-                                label: "trace"
-                            }, {
-                                value: 1,
-                                label: "debug"
-                            }, {
-                                value: 2,
-                                label: "info"
-                            }, {
-                                value: 3,
-                                label: "warn"
-                            }, {
-                                value: 4,
-                                label: "error"
-                            }, {
-                                value: 5,
-                                label: "fatal"
-                            }, {
-                                value: 6,
-                                label: "off"
-                            }],
-                            defaultValue: 3
-                        },
                         expertSettings: {
                             type: "boolean",
                             component: "switch",
@@ -267,6 +239,52 @@ let properties = {
                                 return a.properties.expertSettings
                             }
                         },
+                        loglevel: {
+                            type: "items",
+                            grouped: false,
+                            items:{
+                                loglevelValue: {
+                                    ref: "properties.loglevel",
+                                    label: "loglevel",
+                                    component: "dropdown",
+                                    options: [{
+                                        value: 0,
+                                        label: "trace"
+                                    }, {
+                                        value: 1,
+                                        label: "debug"
+                                    }, {
+                                        value: 2,
+                                        label: "info"
+                                    }, {
+                                        value: 3,
+                                        label: "warn"
+                                    }, {
+                                        value: 4,
+                                        label: "error"
+                                    }, {
+                                        value: 5,
+                                        label: "fatal"
+                                    }, {
+                                        value: 6,
+                                        label: "off"
+                                    }],
+                                    defaultValue: 3
+                                },
+                                loglevelDesc: {
+                                    label: "set the log level for debugging, default is set to error. The messages will be shown in the developer console. You can access this console when possible over the \"F12\" Key, or over the menu from you browser",
+                                    type:"string",
+                                    component: "text"
+                                }
+
+                            },
+                            show: function(a) {
+                                return a.properties.expertSettings
+                            }
+
+
+
+                        }
                     }
                 },
                 options: {
