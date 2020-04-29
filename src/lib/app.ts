@@ -17,7 +17,7 @@ export class AppObject {
     }
 
     public async getAppId(): Promise<string> {
-        const appLayout = await this.app.getAppLayout()
+        const appLayout = await this.app.getAppLayout();
         this.appId = appLayout.qFileName;
         return appLayout.qFileName;
     }
