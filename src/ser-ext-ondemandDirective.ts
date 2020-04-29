@@ -3,7 +3,7 @@ import "css!./ser-ext-ondemandDirective.css";
 import * as template from "text!./ser-ext-ondemandDirective.html";
 import { isNull, isNullOrUndefined } from "util";
 import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
-import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate } from "./node_modules/ser.api/index";
+import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate, ISerSenseSelection } from "./node_modules/ser.api/index";
 import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
 import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
@@ -23,7 +23,6 @@ class OnDemandController implements ng.IController {
 
     private distribute: any;
     private app: AppObject;
-    private tagName = "SER";
     private host: string;
     private interval: number;
     private intervalShort = 3000;
@@ -31,6 +30,7 @@ class OnDemandController implements ng.IController {
     private links: string[];
     private noPropertiesSet = false;
     private properties: IProperties = {
+        maxReportRuntime: 900,
         template: " ",
         output: " ",
         selection: 1,
@@ -57,6 +57,8 @@ class OnDemandController implements ng.IController {
     public set state(v: ESERState) {
         if (v !== this._state) {
             this.logger.trace("new STATE: ", ESERState[v]);
+            this.logger.trace("old STATE private: ", ESERState[this._state]);
+            this.logger.trace("old STATE public: ", ESERState[this._state]);
 
             if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
                 this.logger.debug("in old state status will be fall back to starting");
@@ -72,7 +74,7 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
-            if (this.state === ESERState.error && v !== ESERState.running && v !== ESERState.starting) {
+            if (this.state === ESERState.error && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
                 v = ESERState.error;
             }
 
@@ -242,15 +244,6 @@ class OnDemandController implements ng.IController {
                 this.logger.setLogLvl(properties.loglevel)
             }
             await this.extractObjectProperties(properties)
-            if (properties.selection === ESelectionMode.bookmark) {
-                let a = await this.app.sufficientRightsBookmark(["read", "delete", "update"]);
-                if (!a) {
-                    this.state = ESERState.errorInsufficentRights;
-                    this.logger.warn("insufficient Rights for using bookmarks as connection type, please che you Security Rules");
-                    this.clearInterval();
-                    return;
-                }
-            }
 
             if ((typeof (this.tempContentLibIndex) !== "undefined"
             && this.tempContentLibIndex !== properties.templateContentLibrary)
@@ -309,9 +302,11 @@ class OnDemandController implements ng.IController {
         clearInterval(this.interval);
     }
 
-    private createStartRequest(bookmarkId: string): ISERRequestStart {
+    private async createStartRequest(): Promise<ISERRequestStart> {
         this.logger.debug("fcn: createRequest");
-        let general: ISerGeneral = {};
+        let general: ISerGeneral = {
+            timeout: this.properties.maxReportRuntime
+        };
         let connection: ISerConnection;
         let template: ISerTemplate = {
             input: this.properties.template,
@@ -329,6 +324,7 @@ class OnDemandController implements ng.IController {
                 break;
 
             case 1:
+                const selections = await this.createSelection();
                 connection = {
                     app: this.app.appId
                 };
@@ -336,11 +332,7 @@ class OnDemandController implements ng.IController {
                     input: this.properties.template,
                     output: "OnDemand",
                     outputFormat: this.properties.output,
-                    selections: [{
-                        type: SelectionType.Static,
-                        objectType: "hiddenbookmark",
-                        values: [bookmarkId],
-                    }]
+                    selections: selections
                 };
                 break;
 
@@ -371,33 +363,58 @@ class OnDemandController implements ng.IController {
         };
     }
 
+    private async createSelection(): Promise<ISerSenseSelection[]> {
+
+        const props = {
+            "qInfo": {
+                "qType": "CurrentSelection"
+            },
+            "qSelectionObjectDef": {}
+        };
+
+        let qlikSelectionsObject: EngineAPI.ISelectionListObject;
+        let qlikSelectionsObjectLayout: EngineAPI.IGenericSelectionListLayout;
+
+        try {
+            qlikSelectionsObject = await this.model.app.createSessionObject(props) as EngineAPI.ISelectionListObject
+            qlikSelectionsObjectLayout = await qlikSelectionsObject.getLayout();
+        } catch (error) {
+            this.logger.error("create selection object failed")
+            return []
+        }
+
+        let serSelections: ISerSenseSelection[] = [];
+        for (const field of qlikSelectionsObjectLayout.qSelectionObject.qSelections) {
+            let serSelection: ISerSenseSelection = {
+                objectType: "Field",
+                type: SelectionType.Static,
+                name: field.qField,
+                values: []
+            };
+            for (const value of field.qSelectedFieldSelectionInfo) {
+                serSelection.values.push(`*${value.qName}`);
+            }
+            serSelections.push(serSelection);
+        }
+        return serSelections;
+    }
+
     private start(): void {
         this.logger.debug("fcn: start");
         this.state = ESERState.starting;
 
-        if (this.properties.selection !== 1) {
-            this.runSerStartCommand("")
-                .catch((error) => {
-                    this.logger.error("ERROR in createReport", error);
-                    this.state = ESERState.error;
-                });
-        } else {
-            this.app.createBookmark(this.tagName, this.app.appIsPublic)
-                .then((bookmarkId) => {
-                    return this.runSerStartCommand(bookmarkId);
-                })
-                .catch((error) => {
-                    this.logger.error("ERROR in createReport", error);
-                    this.state = ESERState.error;
-                });
-        }
+        this.runSerStartCommand()
+            .catch((error) => {
+                this.logger.error("ERROR in createReport", error);
+                this.state = ESERState.error;
+            });
     }
 
-    private runSerStartCommand(bookmarkId: string): Promise<void> {
+    private async runSerStartCommand(): Promise<void> {
         this.logger.debug("fcn: runSerStrartCommand");
-        return new Promise((resolve, reject) => {
+        return new Promise(async (resolve, reject) => {
 
-            let requestJson: ISERRequestStart = this.createStartRequest(bookmarkId);
+            let requestJson: ISERRequestStart = await this.createStartRequest();
             let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
             this.logger.debug("Json for SER.start command: ", serCall);
 
@@ -441,11 +458,23 @@ class OnDemandController implements ng.IController {
     private extractObjectProperties(properties: IProperties): Promise<void> {
         this.logger.debug("fcn: extractProperties");
         return new Promise((resolve, reject) => {
+
+            let timeout: number;
+            try {
+                timeout = (properties.maxReportRuntime<1 ? 15 : properties.maxReportRuntime) * 60;
+                timeout = isNaN(timeout) ? 900 : timeout;
+                this.logger.debug("Max report runtime is set to: ", timeout);
+            } catch (error) {
+                this.logger.warn("timeout could not be calculated from input")
+                timeout = 900;
+            }
+
             try {
                 this.properties.template = properties.template;
                 this.properties.selection = properties.selection;
                 this.properties.output = properties.output;
                 this.properties.directDownload = properties.directDownload;
+                this.properties.maxReportRuntime = timeout;
                 resolve();
             } catch (error) {
                 this.logger.error("ERROR", error);
@@ -470,7 +499,7 @@ class OnDemandController implements ng.IController {
         try {
             statusObject = JSON.parse(response);
         } catch (error) {
-            this.logger.error("Error log from SER: ", response);
+            this.logger.error("Error log from SER: ", error);
             this.state = ESERState.error;
             return null;
         }
@@ -526,7 +555,7 @@ class OnDemandController implements ng.IController {
         try {
             var response = await this.model.app.evaluate(serCall);
 
-            this.logger.debug("response from status call", response);
+            this.logger.debug("response from status call: ", response);
             this.timeoutResponseRevieved = true;
 
             let statusObject = this.evaluateStatusResult(response);

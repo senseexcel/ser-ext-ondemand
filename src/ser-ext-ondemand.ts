@@ -125,7 +125,10 @@ let properties = {
                                 label: "PDF"
                             }, {
                                 value: "xlsx",
-                                label: "Excel"
+                                label: "Excel (xlsx)"
+                            }, {
+                                value: "xlsb",
+                                label: "Excel (xlsb)"
                             }, {
                                 value: "docx",
                                 label: "Word"
@@ -136,23 +139,67 @@ let properties = {
                             defaultValue: "pdf"
                         },
                         selection: {
-                            ref: "properties.selection",
-                            label: "Selection Mode",
-                            component: "dropdown",
-                            options: [
-                                {
-                                    value: 0,
-                                    label: "Selection over shared session (experimental)"
+                            type: "items",
+                            grouped: false,
+                            items: {
+                                selectionMode: {
+                                    ref: "properties.selection",
+                                    label: "Selection Mode",
+                                    component: "dropdown",
+                                    options: [
+                                        {
+                                            value: 1,
+                                            label: "Current Selections (new session - recommended)"
+                                        },
+                                        {
+                                            value: 0,
+                                            label: "Current Selections (shared session - experimantal)"
+                                        },
+                                        {
+                                            value: 2,
+                                            label: "Selections embedded in template"
+                                        }
+                                    ],
+                                    defaultValue: 1
                                 },
-                                {
-                                    value: 1,
-                                    label: "Selection over bookmark"
-                                },
-                                {
-                                    value: 2,
-                                    label: "not Use"
-                                },],
-                            defaultValue: 1
+                                selectionModeDesc: {
+                                    label: function (a) {
+                                        let innerHtml = "";
+                                        let message = $("div[tid='selectionModeDesc']")
+                                        .find(".message");
+                                        switch (a.properties.selection) {
+                                            case 0:
+                                                innerHtml = `
+                                                    <span>Reporting connects to the same app session and uses the selections made in the app.</span>
+                                                    </br>
+                                                    <span>This method is experimantal and on some systems not working</span>
+                                                    </br>
+                                                    </br>
+                                                    <span style="font-weight: bold;">Is not working for Analyzer User</span>
+                                                `;
+                                                break;
+                                        
+                                            case 1:
+                                                innerHtml = `
+                                                    <span>Reporting creates new session and the current selections are send to the new session by script</span>
+                                                    </br>
+                                                    </br>
+                                                    <span style="font-weight: bold;">This method is recomended</span>
+                                                `;
+                                                break;
+
+                                            default:
+                                                innerHtml = `
+                                                    <span>Reporting creates new session and takes the selection made in the template</span>
+                                                `;
+                                                break;
+                                        }
+                                        message.html(innerHtml);
+                                    }, 
+                                    type:"string",
+                                    component: "text"
+                                }
+                            }
                         },
                         directDownload: {
                             type: "boolean",
@@ -168,34 +215,76 @@ let properties = {
                             }],
                             defaultValue: false
                         },
-                        loglevel: {
-                            ref: "properties.loglevel",
-                            label: "loglevel",
-                            component: "dropdown",
+                        expertSettings: {
+                            type: "boolean",
+                            component: "switch",
+                            label: "Activate Expert Settings",
+                            ref: "properties.expertSettings",
                             options: [{
-                                value: 0,
-                                label: "trace"
+                                value: true,
+                                label: "On"
                             }, {
-                                value: 1,
-                                label: "debug"
-                            }, {
-                                value: 2,
-                                label: "info"
-                            }, {
-                                value: 3,
-                                label: "warn"
-                            }, {
-                                value: 4,
-                                label: "error"
-                            }, {
-                                value: 5,
-                                label: "fatal"
-                            }, {
-                                value: 6,
-                                label: "off"
+                                value: false,
+                                label: "Off"
                             }],
-                            defaultValue: 3
+                            defaultValue: false
                         },
+                        maxReportRuntime: {
+                            ref: "properties.maxReportRuntime",
+                            label: "Maximum Report Runtime (Minutes)",
+                            defaultValue: 15,
+                            type: "number",
+                            expression: "optional",
+                            show: function(a) {
+                                return a.properties.expertSettings
+                            }
+                        },
+                        loglevel: {
+                            type: "items",
+                            grouped: false,
+                            items:{
+                                loglevelValue: {
+                                    ref: "properties.loglevel",
+                                    label: "loglevel",
+                                    component: "dropdown",
+                                    options: [{
+                                        value: 0,
+                                        label: "trace"
+                                    }, {
+                                        value: 1,
+                                        label: "debug"
+                                    }, {
+                                        value: 2,
+                                        label: "info"
+                                    }, {
+                                        value: 3,
+                                        label: "warn"
+                                    }, {
+                                        value: 4,
+                                        label: "error"
+                                    }, {
+                                        value: 5,
+                                        label: "fatal"
+                                    }, {
+                                        value: 6,
+                                        label: "off"
+                                    }],
+                                    defaultValue: 3
+                                },
+                                loglevelDesc: {
+                                    label: "set the log level for debugging, default is set to error. The messages will be shown in the developer console. You can access this console when possible over the \"F12\" Key, or over the menu from you browser",
+                                    type:"string",
+                                    component: "text"
+                                }
+
+                            },
+                            show: function(a) {
+                                return a.properties.expertSettings
+                            }
+
+
+
+                        }
                     }
                 },
                 options: {
@@ -288,6 +377,10 @@ class OnDemandExtension {
             let calcFcn = objectProperties.properties.calculationConditionFcn;
             let calcText: string = objectProperties.properties.calculationConditionText;
 
+            if (typeof(calcFcn) === "undefined") {
+                calcFcn = {}
+            }
+
             if (!calcText || calcText.length === 0) {
                 calcText = "calculation condition not fulfilled";
             }
@@ -365,7 +458,7 @@ class OnDemandExtension {
                             let last5: string = (value.qUrl as string).substr(value.qUrl.length - 5);
                             let last4: string = (value.qUrl as string).substr(value.qUrl.length - 4);
 
-                            if (last4 === ".xls" || last5 === ".xlsx") {
+                            if (last4 === ".xls" || last5 === ".xlsx" || last5 === ".xlsb" || last5 === ".xlsm") {
                                 let lib = (value.qUrl as string).split("/")[2];
                                 let name = (value.qUrl as string).split("/")[3];
 
