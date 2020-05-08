@@ -72,7 +72,7 @@ export function propertyHelperContent<T>(scope: Object, path: string, searchStri
         })
         .catch((e) => {
             return null;
-        })
+        });
     }
 }
 
