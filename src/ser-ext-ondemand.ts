@@ -63,7 +63,7 @@ let properties = {
                                     label = "could not load content Libraries";
                                 }
 
-                                return propertyHelperLibaries<ILibrary[]>(
+                                let content = propertyHelperLibaries<ILibrary[]>(
                                     propertyScope,
                                     "vm/content",
                                     50000,
@@ -72,6 +72,13 @@ let properties = {
                                         label: label
                                     }]
                                 );
+
+                                content.sort((a, b) => {
+                                    let condition = a.label > b.label ? 1 : -1;
+                                    condition = a.label === "in App" ? 1 : condition;
+                                    return condition
+                                })
+                                return content;
                             }
                         },
                         templateContent: {
@@ -96,7 +103,7 @@ let properties = {
                                         defaultLabel = data.properties.template.split("/")[3];
                                 }
 
-                                return propertyHelperContent<ILibrary[]>(
+                                let content = propertyHelperContent<ILibrary[]>(
                                     propertyScope,
                                     "vm/content",
                                     data.properties.templateContentLibrary,
@@ -106,6 +113,11 @@ let properties = {
                                         label: defaultLabel
                                     }]
                                 );
+
+                                content.sort((a, b) => {
+                                    return a.label > b.label ? 1 : -1;
+                                })
+                                return content;
 
                             },
                             show: function (data: any) {

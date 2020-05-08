@@ -20,24 +20,31 @@ export function waitOnDefined<T>(property: Object, path: string, time: number): 
     });
 }
 
-export function propertyHelperLibaries<T>(scope: Object, path: string, time: number, defaultReturn?: T): Promise<T> | T {
+export function propertyHelperLibaries<T>(scope: Object, path: string, time: number, defaultReturn?: T): T {
 
     try {
 
         return getProperty<T>(scope, path);
     } catch (error) {
 
-        return waitOnDefined<T>(scope, path, time)
+        let calcPromise = waitOnDefined<T>(scope, path, time)
             .catch((error) => {
                 if (typeof (defaultReturn) !== "undefined") {
                     return defaultReturn;
                 }
                 throw error;
             });
+        calcPromise
+        .then((res) => {
+            return res;
+        })
+        .catch((e) => {
+            return null;
+        })
     }
 }
 
-export function propertyHelperContent<T>(scope: Object, path: string, searchString: string, time: number, defaultReturn?: T): Promise<T> | T {
+export function propertyHelperContent<T>(scope: Object, path: string, searchString: string, time: number, defaultReturn?: T): T {
 
     let result: T;
     try {
@@ -47,7 +54,7 @@ export function propertyHelperContent<T>(scope: Object, path: string, searchStri
 
     } catch (error) {
 
-        return new Promise((resolve, reject) => {
+        let calcPromise = new Promise<T>((resolve, reject) => {
             waitOnDefined<T>(scope, path, time)
                 .then((res) => {
                     return resolve(getContentByLibaryName(res, searchString));
@@ -59,6 +66,13 @@ export function propertyHelperContent<T>(scope: Object, path: string, searchStri
                     throw error;
                 });
         });
+        calcPromise
+        .then((res) => {
+            return res;
+        })
+        .catch((e) => {
+            return null;
+        })
     }
 }
 
