@@ -74,7 +74,7 @@ let properties = {
                                 );
 
                                 content.sort((a, b) => {
-                                    let condition = a.label > b.label ? 1 : -1;
+                                    let condition = a.label.toLocaleLowerCase() > b.label.toLocaleLowerCase() ? 1 : -1;
                                     condition = a.label === "in App" ? 1 : condition;
                                     return condition
                                 })
@@ -115,7 +115,7 @@ let properties = {
                                 );
 
                                 content.sort((a, b) => {
-                                    return a.label > b.label ? 1 : -1;
+                                    return a.label.toLocaleLowerCase() > b.label.toLocaleLowerCase() ? 1 : -1;
                                 })
                                 return content;
 
@@ -141,6 +141,9 @@ let properties = {
                             }, {
                                 value: "xlsb",
                                 label: "Excel (xlsb)"
+                            }, {
+                                value: "xlsm",
+                                label: "Excel (xlsm)"
                             }, {
                                 value: "docx",
                                 label: "Word"
@@ -214,18 +217,29 @@ let properties = {
                             }
                         },
                         directDownload: {
-                            type: "boolean",
-                            component: "switch",
-                            label: "Direct Download",
-                            ref: "properties.directDownload",
-                            options: [{
-                                value: true,
-                                label: "On"
-                            }, {
-                                value: false,
-                                label: "Not On"
-                            }],
-                            defaultValue: false
+                            type: "items",
+                            grouped: false,
+                            items:{
+                                directDoenloadValue: {
+                                    type: "boolean",
+                                    component: "switch",
+                                    label: "Direct Download",
+                                    ref: "properties.directDownload",
+                                    options: [{
+                                        value: true,
+                                        label: "On"
+                                    }, {
+                                        value: false,
+                                        label: "Not On"
+                                    }],
+                                    defaultValue: false
+                                },
+                                directDoenloadDesc: {
+                                    label: "Activate or deactivate the automatic download when the report is finished. IMPORTANT, most browser are blocking the download. When this happens, you will get a hint next to the URL to allow the downloads.",
+                                    type:"string",
+                                    component: "text"
+                                }
+                            }
                         },
                         expertSettings: {
                             type: "boolean",
@@ -242,13 +256,27 @@ let properties = {
                             defaultValue: false
                         },
                         maxReportRuntime: {
-                            ref: "properties.maxReportRuntime",
-                            label: "Maximum Report Runtime (Minutes)",
-                            defaultValue: 15,
-                            type: "number",
-                            expression: "optional",
-                            show: function(a) {
-                                return a.properties.expertSettings
+                            type: "items",
+                            grouped: false,
+                            items: {
+                                maxReportRuntimeValue: {
+                                    ref: "properties.maxReportRuntime",
+                                    label: "Maximum Report Runtime (Minutes)",
+                                    defaultValue: 15,
+                                    type: "number",
+                                    expression: "optional",
+                                    show: function(a) {
+                                        return a.properties.expertSettings
+                                    }
+                                },
+                                maxReportRuntimeDesc: {
+                                    label: "sets a duration, after which the creation of the report is canceled by the engine, default is set to 15 minutes",
+                                    type:"string",
+                                    component: "text",
+                                    show: function(a) {
+                                        return a.properties.expertSettings
+                                    }
+                                }
                             }
                         },
                         loglevel: {
@@ -304,17 +332,50 @@ let properties = {
                     label: "Options",
                     grouped: true,
                     items: {
+                        
+                        calculationConditionToggle: {
+                            type: "boolean",
+                            component: "switch",
+                            label: "Activate Calculation Condition",
+                            ref: "properties.toggleCalculationCondition",
+                            options: [{
+                                value: true,
+                                label: "On"
+                            }, {
+                                value: false,
+                                label: "Not On"
+                            }],
+                            defaultValue: false
+                        },
                         calculationConditionFcn: {
-                            ref: "properties.calculationConditionFcn",
-                            label: "Calculation Condition",
-                            type: "string",
-                            expression: "optional"
+
+                            type: "items",
+                            grouped: false,
+                            items:{
+                                calculationConditionFcnValue: {
+                                    ref: "properties.calculationConditionFcn",
+                                    label: "Calculation Condition",
+                                    type: "string",
+                                    expression: "optional"
+                                },
+                                calculationConditionFcnDesc: {
+                                    label: "Define a condition, under which the executable button is displayed. When the condition is not fulfilled it will display a hint. The message can be adjust in the textbox below (html code is possible).",
+                                    type:"string",
+                                    component: "text"
+                                }
+                            }
                         },
                         calculationConditionText: {
-                            ref: "properties.calculationConditionText",
-                            label: "Text",
-                            type: "string",
-                            component: "textarea"
+                            type: "items",
+                            grouped: false,
+                            items:{
+                                calculationConditionTextValue: {
+                                    ref: "properties.calculationConditionText",
+                                    label: "Text",
+                                    type: "string",
+                                    component: "textarea"
+                                }
+                            }
                         }
                     }
                 },
@@ -388,6 +449,7 @@ class OnDemandExtension {
             const objectProperties = await this.model.getProperties()
             let calcFcn = objectProperties.properties.calculationConditionFcn;
             let calcText: string = objectProperties.properties.calculationConditionText;
+            let toggleCalcCon = objectProperties.properties.toggleCalculationCondition;
 
             if (typeof(calcFcn) === "undefined") {
                 calcFcn = {}
@@ -398,10 +460,11 @@ class OnDemandExtension {
             }
 
             try {
-                if (typeof((calcFcn as any).qStringExpression) !== "undefined") {
-                let a = (calcFcn as any).qStringExpression.qExpr
-                let b = await this.model.app.evaluateEx(a);
+                if (toggleCalcCon && typeof((calcFcn as any).qStringExpression) !== "undefined") {
+                    let a = (calcFcn as any).qStringExpression.qExpr
+                    let b = await this.model.app.evaluateEx(a);
 
+                    console.log("b.qNumber", b.qNumber);
                     if (b.qNumber === -1) {
                         this.logger.debug("calculation condition fulfilled")
                         this.checkCalcCond = true;
@@ -414,6 +477,7 @@ class OnDemandExtension {
                     this.logger.trace("no calculation condition set")
                     this.checkCalcCond = true;
                 }
+                console.log("this.checkCalcCond", this.checkCalcCond);
             } catch (error) {
                 this.checkCalcCond = true;
                 this.logger.error("Error in constructor of ser-ext-ondemand")
