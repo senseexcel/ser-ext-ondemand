@@ -310,7 +310,7 @@ class OnDemandController implements ng.IController {
         let connection: ISerConnection;
         let template: ISerTemplate = {
             input: this.properties.template,
-            output: "OnDemand",
+            output: `OnDemand-${this.app.appName}`,
             outputFormat: this.properties.output,
             selectionsClearAll: false
         };
@@ -330,7 +330,7 @@ class OnDemandController implements ng.IController {
                 };
                 template = {
                     input: this.properties.template,
-                    output: "OnDemand",
+                    output: `OnDemand-${this.app.appName}`,
                     outputFormat: this.properties.output,
                     selections: selections
                 };
