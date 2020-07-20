@@ -74,7 +74,7 @@ let properties = {
                                 );
 
                                 content.sort((a, b) => {
-                                    let condition = a.label > b.label ? 1 : -1;
+                                    let condition = a.label.toLocaleLowerCase() > b.label.toLocaleLowerCase() ? 1 : -1;
                                     condition = a.label === "in App" ? 1 : condition;
                                     return condition
                                 })
@@ -115,7 +115,7 @@ let properties = {
                                 );
 
                                 content.sort((a, b) => {
-                                    return a.label > b.label ? 1 : -1;
+                                    return a.label.toLocaleLowerCase() > b.label.toLocaleLowerCase() ? 1 : -1;
                                 })
                                 return content;
 
