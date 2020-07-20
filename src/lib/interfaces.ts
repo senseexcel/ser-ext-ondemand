@@ -71,6 +71,7 @@ export interface IProperties {
     maxReportRuntime: number;
     templateContentLibrary?: number;
     loglevel?: logging.LogLevel;
+    toggleCalculationCondition?: boolean;
     calculationConditionFcn?: string;
     calculationConditionText?: string;
 }

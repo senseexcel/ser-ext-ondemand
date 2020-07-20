@@ -3,6 +3,7 @@ export class AppObject {
     private app: EngineAPI.IApp;
 
     public appId: string;
+    public appName: string;
     public appIsPublic: boolean;
 
     constructor(app: EngineAPI.IApp) {
@@ -19,6 +20,8 @@ export class AppObject {
     public async getAppId(): Promise<string> {
         const appLayout = await this.app.getAppLayout();
         this.appId = appLayout.qFileName;
+        this.appName = appLayout.qTitle;
+        debugger
         return appLayout.qFileName;
     }
 
