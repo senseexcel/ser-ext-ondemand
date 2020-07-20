@@ -142,6 +142,9 @@ let properties = {
                                 value: "xlsb",
                                 label: "Excel (xlsb)"
                             }, {
+                                value: "xlsm",
+                                label: "Excel (xlsm)"
+                            }, {
                                 value: "docx",
                                 label: "Word"
                             }, {
