@@ -21,7 +21,6 @@ export class AppObject {
         const appLayout = await this.app.getAppLayout();
         this.appId = appLayout.qFileName;
         this.appName = appLayout.qTitle;
-        debugger
         return appLayout.qFileName;
     }
 
