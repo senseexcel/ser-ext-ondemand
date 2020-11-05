@@ -464,7 +464,6 @@ class OnDemandExtension {
                     let a = (calcFcn as any).qStringExpression.qExpr
                     let b = await this.model.app.evaluateEx(a);
 
-                    console.log("b.qNumber", b.qNumber);
                     if (b.qNumber === -1) {
                         this.logger.debug("calculation condition fulfilled")
                         this.checkCalcCond = true;
@@ -477,7 +476,6 @@ class OnDemandExtension {
                     this.logger.trace("no calculation condition set")
                     this.checkCalcCond = true;
                 }
-                console.log("this.checkCalcCond", this.checkCalcCond);
             } catch (error) {
                 this.checkCalcCond = true;
                 this.logger.error("Error in constructor of ser-ext-ondemand")
