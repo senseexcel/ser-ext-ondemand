@@ -4,7 +4,7 @@ import * as template from "text!./ser-ext-ondemandDirective.html";
 import { isNull, isNullOrUndefined } from "util";
 import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate, ISerSenseSelection } from "./node_modules/ser.api/index";
-import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute } from "./lib/interfaces";
+import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute, IDistributeNew } from "./lib/interfaces";
 import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
 import { AppObject } from "./lib/app";
 import { Logger } from "./lib/logger/index";
@@ -102,16 +102,31 @@ class OnDemandController implements ng.IController {
                     this.interactOptions(false, false, false);
 
                     try {
-                        let distributeObject: IDistribute = JSON.parse(this.distribute);
+                        let distributeObject: IDistribute | IDistributeNew[] = JSON.parse(this.distribute);
                         this.links = [];
-                        for (const hubResult of distributeObject.hubResults) {
-                            if (!hubResult.link) {
-                                throw "Empty Downloadlink, please check SecRules";
-                            }
-                            if (hubResult.success) {
-                                this.links.push(`${this.host}${hubResult.link}`)
+
+                        if(typeof((distributeObject as IDistribute).hubResults) !== "undefined") {
+                            for (const hubResult of (distributeObject as IDistribute).hubResults) {
+                                if (!hubResult.link) {
+                                    throw "Empty Downloadlink, please check SecRules";
+                                }
+                                if (hubResult.success) {
+                                    this.links.push(`${this.host}${hubResult.link}`)
+                                }
                             }
                         }
+
+                        if (typeof(distributeObject[0]) !== "undefined") {
+                            for (const object of (distributeObject as IDistributeNew[])) {
+                                if (!object.link) {
+                                    throw "Empty Downloadlink, please check SecRules";
+                                }
+                                if (object.success) {
+                                    this.links.push(`${this.host}${object.link}`)
+                                }
+                            }
+                        }
+
                     } catch (error) {
                         this.logger.error("error in setter of state: ", error);
                         this.state = ESERState.error;
