@@ -37,6 +37,13 @@ export interface IDistribute {
     hubResults: IHubResult[];
 }
 
+export interface IDistributeNew {
+    distributionMode: string,
+    link: string,
+    success: boolean,
+    message: string
+}
+
 export interface IHubResult {
     link: string;
     success: boolean;
