@@ -457,7 +457,7 @@ class OnDemandController implements ng.IController {
             let serSelection: ISerSenseSelection = {
                 objectType: "Field",
                 type: SelectionType.Static,
-                name: field,
+                name: field.replace(/'/g, "''"),
                 values: []
             };
             for (const value of selections) {
@@ -470,7 +470,7 @@ class OnDemandController implements ng.IController {
         let serSelection: ISerSenseSelection = {
             objectType: "Field",
             type: SelectionType.Static,
-            name: field,
+            name: field.replace(/'/g, "''"),
             values: [textSearch]
         };
         return serSelection;
@@ -481,7 +481,7 @@ class OnDemandController implements ng.IController {
             this.logger.warn("Height of seected or deselected to large");
             height = 3000
         }
-
+        let fcnTesterName = field.substr(0,1)==="="?true:false;
         const parameter: EngineAPI.IGenericObjectProperties = {
             qInfo: {
                 qType: "ListObject"
@@ -516,7 +516,7 @@ class OnDemandController implements ng.IController {
         let serSelection: ISerSenseSelection = {
             objectType: "Field",
             type: SelectionType.Static,
-            name: field,
+            name: field.replace(/'/g, "''"),
             values: []
         };
 
@@ -525,13 +525,14 @@ class OnDemandController implements ng.IController {
 
         let selectionString = "=";
         let counter = 0;
+        let assistField = field.replace(/'/g, "''").replace("=", "")
 
         if (negation) {
             assistLayout.qListObject.qDataPages[0].qMatrix.forEach((row) => {
                 if (counter > 0) {
                     selectionString += " and ";
                 }
-                selectionString += `[${field}]<>''${row[0].qText}''`;
+                selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}<>''${row[0].qText}''`;
                 counter++;
             })
         } else {
@@ -539,7 +540,7 @@ class OnDemandController implements ng.IController {
                 if (counter > 0) {
                     selectionString += " or ";
                 }
-                selectionString += `[${field}]=''${row[0].qText}''`;
+                selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}=''${row[0].qText}''`;
                 counter++;
             })
         }
@@ -550,20 +551,22 @@ class OnDemandController implements ng.IController {
     }
 
     private createSerSelectionNotSelected(field: string, selections: {qName: string, qFieldSelectionMode: string}[]): ISerSenseSelection {
-        
+
+        let fcnTesterName = field.substr(0,1)==="="?true:false;
         let serSelection: ISerSenseSelection = {
             objectType: "Field",
             type: SelectionType.Static,
-            name: field,
+            name: field.replace(/'/g, "''"),
             values: []
         };
         let selectionString = "=";
         let assistCounter = 0;
+        let assistField = field.replace(/'/g, "''").replace("=", "")
         for (const value of selections) {
             if (assistCounter > 0) {
                 selectionString += " and ";
             }
-            selectionString += `[${field}]<>''${value.qName}''`;
+            selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}<>''${value.qName}''`;
             assistCounter++;
         }
         serSelection.values.push(selectionString);
