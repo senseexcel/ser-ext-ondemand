@@ -379,12 +379,13 @@ class OnDemandController implements ng.IController {
     }
 
     private async createSelection(): Promise<ISerSenseSelection[]> {
+        this.logger.debug("in createSelection")
 
         const props = {
-            "qInfo": {
-                "qType": "CurrentSelection"
+            qInfo: {
+                qType: "CurrentSelection"
             },
-            "qSelectionObjectDef": {}
+            qSelectionObjectDef: {}
         };
 
         let qlikSelectionsObject: EngineAPI.ISelectionListObject;
@@ -393,25 +394,180 @@ class OnDemandController implements ng.IController {
         try {
             qlikSelectionsObject = await this.model.app.createSessionObject(props) as EngineAPI.ISelectionListObject
             qlikSelectionsObjectLayout = await qlikSelectionsObject.getLayout();
+
+
+            let serSelections: ISerSenseSelection[] = [];
+
+
+            for (const selection of qlikSelectionsObjectLayout.qSelectionObject.qSelections) {
+
+                let field = selection.qField;
+
+                let notSelectedLength = selection.qNotSelectedFieldSelectionInfo.length;
+                let selectedLength = selection.qSelectedFieldSelectionInfo.length;
+                let selectionThreshold = selection.qSelectionThreshold;
+                let textSearchActive = typeof(selection.qTextSearch) !== "undefined";
+
+                this.logger.debug("field for selection creation",field);
+
+                if (textSearchActive) {
+                    this.logger.debug("in text search");
+
+                    let serTextSearchSelection = this.createSerSelectionOverTextSearch(field, selection.qTextSearch);
+                    serSelections.push(serTextSearchSelection);
+
+                } else if (selectedLength > 0 && selectedLength < selectionThreshold) {
+                    this.logger.debug("in selection object");
+
+                    let serSelectionObjectSelection = this.createSerSelectionSelectionObject(field, selection.qSelectedFieldSelectionInfo)
+                    serSelections.push(serSelectionObjectSelection);
+
+
+                } else if (notSelectedLength > 0 && notSelectedLength < selectionThreshold) {
+                    this.logger.debug("in selection object nit");
+                    
+                    let serSelectionObjectNotSelection = this.createSerSelectionNotSelected(field, selection.qNotSelectedFieldSelectionInfo)
+                    serSelections.push(serSelectionObjectNotSelection);
+                
+                } else if (selection.qSelectedCount > selection.qTotal - selection.qSelectedCount) {
+                    this.logger.debug("in listcube not search");
+
+                    let serSelectionHypercubeSelection = await this.createSerSelectionList(field, selection.qTotal - selection.qSelectedCount, true)
+                    serSelections.push(serSelectionHypercubeSelection);
+
+                } else {
+                    this.logger.debug("in listcube search");
+
+                    let serSelectionHypercubeSelection = await this.createSerSelectionList(field, selection.qSelectedCount)
+                    serSelections.push(serSelectionHypercubeSelection);
+                }
+            }
+
+            this.logger.debug("serSelections", serSelections);
+
+            return serSelections;
+
         } catch (error) {
             this.logger.error("create selection object failed")
             return []
         }
+    }
 
-        let serSelections: ISerSenseSelection[] = [];
-        for (const field of qlikSelectionsObjectLayout.qSelectionObject.qSelections) {
+    private createSerSelectionSelectionObject(field: string, selections: {qName: string, qFieldSelectionMode: string}[]): ISerSenseSelection {
             let serSelection: ISerSenseSelection = {
                 objectType: "Field",
                 type: SelectionType.Static,
-                name: field.qField,
+                name: field,
                 values: []
             };
-            for (const value of field.qSelectedFieldSelectionInfo) {
+            for (const value of selections) {
                 serSelection.values.push(`*${value.qName}`);
             }
-            serSelections.push(serSelection);
+            return serSelection;
+    }
+
+    private createSerSelectionOverTextSearch(field: string, textSearch: string): ISerSenseSelection {
+        let serSelection: ISerSenseSelection = {
+            objectType: "Field",
+            type: SelectionType.Static,
+            name: field,
+            values: [textSearch]
+        };
+        return serSelection;
+    }
+
+    private async createSerSelectionList(field: string, height: number, negation = false): Promise<ISerSenseSelection> {
+        if (height > 3000) {
+            this.logger.warn("Height of seected or deselected to large");
+            height = 3000
         }
-        return serSelections;
+
+        const parameter: EngineAPI.IGenericObjectProperties = {
+            qInfo: {
+                qType: "ListObject"
+            },
+            qListObjectDef: {
+                qDef: {
+                    qStateName: "$",
+                    qFieldDefs: [
+                        field
+                    ],
+                    qFieldLabels: [
+                      field
+                    ],
+                    qSortCriterias: [
+                        {
+                            qSortByState: 1
+                        }
+                    ],
+                    qReverseSort: negation
+                },
+                qInitialDataFetch : [
+                    {
+                        qWidth : 1,
+                        qHeight : height,
+                        qTop: 0,
+                        qLeft: 0,
+                    }
+                ]
+            }
+        };
+
+        let serSelection: ISerSenseSelection = {
+            objectType: "Field",
+            type: SelectionType.Static,
+            name: field,
+            values: []
+        };
+
+        const assistObject = await this.model.app.createSessionObject(parameter);
+        const assistLayout: EngineAPI.IGenericListLayout = await assistObject.getLayout() as EngineAPI.IGenericListLayout;
+
+        let selectionString = "=";
+        let counter = 0;
+
+        if (negation) {
+            assistLayout.qListObject.qDataPages[0].qMatrix.forEach((row) => {
+                if (counter > 0) {
+                    selectionString += " and ";
+                }
+                selectionString += `[${field}]<>''${row[0].qText}''`;
+                counter++;
+            })
+        } else {
+            assistLayout.qListObject.qDataPages[0].qMatrix.forEach((row) => {
+                if (counter > 0) {
+                    selectionString += " or ";
+                }
+                selectionString += `[${field}]=''${row[0].qText}''`;
+                counter++;
+            })
+        }
+
+        serSelection.values.push(selectionString);
+        return serSelection;
+
+    }
+
+    private createSerSelectionNotSelected(field: string, selections: {qName: string, qFieldSelectionMode: string}[]): ISerSenseSelection {
+        
+        let serSelection: ISerSenseSelection = {
+            objectType: "Field",
+            type: SelectionType.Static,
+            name: field,
+            values: []
+        };
+        let selectionString = "=";
+        let assistCounter = 0;
+        for (const value of selections) {
+            if (assistCounter > 0) {
+                selectionString += " and ";
+            }
+            selectionString += `[${field}]<>''${value.qName}''`;
+            assistCounter++;
+        }
+        serSelection.values.push(selectionString);
+        return serSelection;
     }
 
     private start(): void {
