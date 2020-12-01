@@ -1,11 +1,11 @@
 //#region imports
 import "css!./ser-ext-ondemandDirective.css";
 import * as template from "text!./ser-ext-ondemandDirective.html";
-import { isNull, isNullOrUndefined } from "util";
+import { isNull } from "util";
 import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate, ISerSenseSelection } from "./node_modules/ser.api/index";
-import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute, IDistributeNew } from "./lib/interfaces";
-import { ESERState, EVersionOption, ESerResponseStatus, ESelectionMode } from "./lib/enums";
+import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute, IDistributeNew, IConnectorResponse } from "./lib/interfaces";
+import { ESERState, EVersionOption, ESerResponseStatusSmaler5, ESerResponseStatus } from "./lib/enums";
 import { AppObject } from "./lib/app";
 import { Logger } from "./lib/logger/index";
 //#endregion
@@ -43,7 +43,9 @@ class OnDemandController implements ng.IController {
     private reportDownloaded = false;
     private timeoutResponseRevieved = true;
     private timeoutResponseCounter = 0;
-    private readyStateCounter = 0
+    private readyStateCounter = 0;
+    private version: number;
+    private versionGreaterEqual5 = true;
     //#endregion
 
     //#region state
@@ -58,7 +60,7 @@ class OnDemandController implements ng.IController {
         if (v !== this._state) {
             this.logger.trace("new STATE: ", ESERState[v]);
             this.logger.trace("old STATE private: ", ESERState[this._state]);
-            this.logger.trace("old STATE public: ", ESERState[this._state]);
+            this.logger.trace("old STATE public: ", ESERState[this.state]);
 
             if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
                 this.logger.debug("in old state status will be fall back to starting");
@@ -74,8 +76,18 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
-            if (this.state === ESERState.error && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
-                v = ESERState.error;
+            console.log("############")
+            console.log("1", this.state)
+            console.log("2", v)
+            console.log("############")
+            if (this.versionGreaterEqual5) {
+                if (this.state === ESERState.error && v !== ESERState.serNotRunning && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
+                    v = ESERState.error;
+                }
+            } else {
+                if (this.state === ESERState.error && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
+                    v = ESERState.error;
+                }
             }
 
             this.logger.debug("set STATE: ", ESERState[v]);
@@ -105,6 +117,7 @@ class OnDemandController implements ng.IController {
                         let distributeObject: IDistribute | IDistributeNew[] = JSON.parse(this.distribute);
                         this.links = [];
 
+                        // Fallback for < 4.8.1
                         if(typeof((distributeObject as IDistribute).hubResults) !== "undefined") {
                             for (const hubResult of (distributeObject as IDistribute).hubResults) {
                                 if (!hubResult.link) {
@@ -115,6 +128,7 @@ class OnDemandController implements ng.IController {
                                 }
                             }
                         }
+                        // end Fallback
 
                         if (typeof(distributeObject[0]) !== "undefined") {
                             for (const object of (distributeObject as IDistributeNew[])) {
@@ -132,6 +146,7 @@ class OnDemandController implements ng.IController {
                         this.state = ESERState.error;
                         break;
                     }
+                    this.taskId = undefined;
                     if (this.properties.directDownload) {
                         this.action();
                     } else {
@@ -306,10 +321,17 @@ class OnDemandController implements ng.IController {
     }
 
     private async runStatus() {
-        if (this.timeoutResponseRevieved || this.timeoutResponseCounter > 10) {
-            this.timeoutResponseRevieved = false;
+
+        if (this.versionGreaterEqual5) {
             await this.getStatus(this.taskId);
+        } else {
+            
+            if (this.timeoutResponseRevieved || this.timeoutResponseCounter > 10) {
+                this.timeoutResponseRevieved = false;
+                await this.getStatus(this.taskId);
+            }
         }
+
     }
 
     private clearInterval(): void {
@@ -588,44 +610,78 @@ class OnDemandController implements ng.IController {
         this.logger.debug("fcn: runSerStrartCommand");
         return new Promise(async (resolve, reject) => {
 
-            let requestJson: ISERRequestStart = await this.createStartRequest();
-            let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
-            this.logger.debug("Json for SER.start command: ", serCall);
+            if (this.versionGreaterEqual5) {
+                let requestJson: ISERRequestStart = await this.createStartRequest();
+                let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
+                this.logger.debug("Json for SER.start command: ", serCall);
+                let response = await this.model.app.evaluate(serCall);
+                let statusObject: IConnectorResponse;
+                this.logger.debug("Response from SER.Start: ", response);
+                try {
+                    statusObject = JSON.parse(response);
+                } catch (error) {
+                    this.logger.error("error", error);
+                    return;
+                }
+                this.logger.debug("taskId:", statusObject.taskId);
+                this.logger.debug("Status:", statusObject.status);
 
-            this.model.app.evaluate(serCall)
-                .then((response) => {
-                    let statusObject: ISERResponseStart;
-                    this.logger.debug("Response from SER.Start: ", response);
-                    try {
-                        statusObject = JSON.parse(response);
-                    } catch (error) {
-                        this.logger.error("error", error);
-                    }
-                    this.logger.debug("taskId:", statusObject.taskId);
-                    this.logger.debug("Status:", statusObject.status);
+                if (statusObject.taskId === undefined && statusObject.log !== undefined) {
+                    this.logger.warn("Task Id undefined, log:", statusObject.log);
+                }
 
-                    if (typeof (statusObject) === "undefined" || statusObject.taskId === "-1") {
-                        this.logger.debug("in defined error block from SER.Start");
-                        this.title = "Wrong Task ID - Retry";
-                        return;
-                    }
+                if (statusObject.status === -1) {
+                    this.state = ESERState.error;
+                }
 
-                    if (statusObject.status === -1) {
-                        this.state = ESERState.serNoConnectionQlik;
-                    }
+                this.logger.debug("set Task ID");
+                this.taskId = statusObject.taskId;
+                this.state = ESERState.starting;
 
-                    this.logger.debug("set Task ID");
-                    this.taskId = statusObject.taskId;
-                    this.state = ESERState.running;
+                this.clearInterval();
+                this.setStatusInterval(this.intervalShort);
 
-                    this.clearInterval();
-                    this.setStatusInterval(this.intervalShort);
-                    resolve();
-                })
-                .catch((error) => {
-                    this.logger.error("ERROR", error);
-                    reject(error);
-                });
+            } else {
+
+                let requestJson: ISERRequestStart = await this.createStartRequest();
+                let serCall: string = `SER.Start('${JSON.stringify(requestJson)}')`;
+                this.logger.debug("Json for SER.start command: ", serCall);
+    
+                this.model.app.evaluate(serCall)
+                    .then((response) => {
+                        let statusObject: ISERResponseStart;
+                        this.logger.debug("Response from SER.Start: ", response);
+                        try {
+                            statusObject = JSON.parse(response);
+                        } catch (error) {
+                            this.logger.error("error", error);
+                        }
+                        this.logger.debug("taskId:", statusObject.taskId);
+                        this.logger.debug("Status:", statusObject.status);
+    
+                        if (typeof (statusObject) === "undefined" || statusObject.taskId === "-1") {
+                            this.logger.debug("in defined error block from SER.Start");
+                            this.title = "Wrong Task ID - Retry";
+                            return;
+                        }
+    
+                        if (statusObject.status === -1) {
+                            this.state = ESERState.serNoConnectionQlik;
+                        }
+    
+                        this.logger.debug("set Task ID");
+                        this.taskId = statusObject.taskId;
+                        this.state = ESERState.running;
+    
+                        this.clearInterval();
+                        this.setStatusInterval(this.intervalShort);
+                        resolve();
+                    })
+                    .catch((error) => {
+                        this.logger.error("ERROR", error);
+                        reject(error);
+                    });
+            }
         });
     }
 
@@ -681,44 +737,89 @@ class OnDemandController implements ng.IController {
         return statusObject
     }
 
-    private mapSerStatusAndSetStatus(status: ESerResponseStatus) {
+    private mapSerStatusAndSetStatus(status: ESerResponseStatusSmaler5 | ESerResponseStatus) {
 
-        switch (status) {
-            case ESerResponseStatus.serConnectionQlikError:
-                this.state = ESERState.serNoConnectionQlik;
-                break;
-            case ESerResponseStatus.serError:
-                this.state = ESERState.error;
-                break;
-            case ESerResponseStatus.serReady:
-                this.state = ESERState.ready;
-                break;
-            case ESerResponseStatus.serRunning:
-                this.state = ESERState.running;
-                this.reportDownloaded = false;
-                break;
-            case ESerResponseStatus.serBuildReport:
-                this.state = ESERState.running;
-                break;
-            case ESerResponseStatus.serFinished:
-                this.state = ESERState.finished;
-                break;
-
-            case ESerResponseStatus.serStopping:
-                this.state = ESERState.ready;
-                break;
-
-            default:
-                this.state = ESERState.error;
-                break;
+        // TODO make nice nameing of serVersion ???
+        if (this.versionGreaterEqual5) {
+            switch (status as ESerResponseStatus) {
+                case ESerResponseStatus.serError:
+                    this.state = ESERState.error;
+                    break;
+                case ESerResponseStatus.serVersion:
+                        this.state = ESERState.ready;
+                        break;
+                case ESerResponseStatus.serCreatingReport:
+                    this.state = ESERState.starting;
+                    break;
+                case ESerResponseStatus.serRunning:
+                    this.state = ESERState.running;
+                    this.reportDownloaded = false;
+                    break;
+                case ESerResponseStatus.serDeleveryReport:
+                    this.state = ESERState.running;
+                    break;
+                case ESerResponseStatus.serFinished:
+                    this.state = ESERState.finished;
+                    break;
+    
+                case ESerResponseStatus.serStopping:
+                    this.taskId = undefined;
+                    this.state = ESERState.ready;
+                    break;
+    
+                default:
+                    this.state = ESERState.error;
+                    break;
+            }
+            
+        } else {
+            switch (status as ESerResponseStatusSmaler5) {
+                case ESerResponseStatusSmaler5.serConnectionQlikError:
+                    this.state = ESERState.serNoConnectionQlik;
+                    break;
+                case ESerResponseStatusSmaler5.serError:
+                    this.state = ESERState.error;
+                    break;
+                case ESerResponseStatusSmaler5.serReady:
+                    this.state = ESERState.ready;
+                    break;
+                case ESerResponseStatusSmaler5.serRunning:
+                    this.state = ESERState.running;
+                    this.reportDownloaded = false;
+                    break;
+                case ESerResponseStatusSmaler5.serBuildReport:
+                    this.state = ESERState.running;
+                    break;
+                case ESerResponseStatusSmaler5.serFinished:
+                    this.state = ESERState.finished;
+                    break;
+    
+                case ESerResponseStatusSmaler5.serStopping:
+                    this.state = ESERState.ready;
+                    break;
+    
+                default:
+                    this.state = ESERState.error;
+                    break;
+            }
         }
     }
 
     private async getStatus(taskId: string) {
+
+        if (this.links !== undefined && this.links.length > 0) {
+            this.logger.trace("download link still available");
+            return;
+        }
+
+        // TODO check status === 100
+        // let askedForVersion = true;
         let reqestJson: ISERRequestStatus = {
             "versions": EVersionOption[EVersionOption.all]
         };
-        if (typeof (taskId) !== "undefined") {
+
+        if (taskId !== null && taskId !== undefined) {
+            // askedForVersion = false;
             reqestJson = {
                 "taskId": `${taskId}`
             };
@@ -727,14 +828,21 @@ class OnDemandController implements ng.IController {
         this.logger.debug("call fcn getStatus", serCall);
 
         try {
-            var response = await this.model.app.evaluate(serCall);
-
+            let response = await this.model.app.evaluate(serCall);
             this.logger.debug("response from status call: ", response);
+
+            // TODO remove in >= 5
             this.timeoutResponseRevieved = true;
 
             let statusObject = this.evaluateStatusResult(response);
-            if (isNullOrUndefined(statusObject)) {
+            if (statusObject === null || statusObject === undefined) {
                 throw "error";
+            }
+
+            if (this.version === null || this.version === undefined) {
+                this.version = this.evaluateVersion(statusObject);
+                this.versionGreaterEqual5 = this.version >= 5;
+                this.logger.debug("Version greater equal 5: ", this.versionGreaterEqual5)
             }
 
             if (typeof (statusObject.taskId) !== "undefined") {
@@ -747,11 +855,14 @@ class OnDemandController implements ng.IController {
 
             this.logger.debug("statusObject.Status", statusObject.status);
 
+            // if (askedForVersion) {
+            //     statusObject.status = 100;
+            // }
             this.mapSerStatusAndSetStatus(statusObject.status)
             return;
 
         } catch (error) {
-            this.logger.error(error);
+            this.logger.error("####################", error);
             this.state = ESERState.serNotRunning;
             return;
         }
@@ -795,6 +906,15 @@ class OnDemandController implements ng.IController {
         }
         this.reportDownloaded = true;
         this.links = [];
+    }
+
+    private evaluateVersion(response: IConnectorResponse | ISERResponseStatus): number {
+        try {
+            return parseInt(response.version.split(".")[0]);
+        } catch (error) {
+            this.logger.warn("error while evaluation status risponse: ", response.log);
+            return 0
+        }
     }
 
     //#endregion

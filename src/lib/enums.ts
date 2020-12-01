@@ -12,7 +12,7 @@ export enum ESERState {
     errorInsufficentRights
 }
 
-export enum ESerResponseStatus {
+export enum ESerResponseStatusSmaler5 {
     serConnectionQlikError = -2,
     serError = -1,
     serReady = 0,
@@ -20,6 +20,16 @@ export enum ESerResponseStatus {
     serBuildReport = 2,
     serFinished = 3,
     serStopping = 4
+}
+
+export enum ESerResponseStatus {
+    serError = -1,
+    serCreatingReport = 0,
+    serRunning = 1,
+    serDeleveryReport = 2,
+    serFinished = 3,
+    serStopping = 4,
+    serVersion = 100
 }
 
 export enum EVersionOption {

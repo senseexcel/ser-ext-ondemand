@@ -5,7 +5,7 @@ import { ISerConfig,
          ISerReport}                    from "../node_modules/ser.api/index";
 import { EVersionOption,
          ETaskOption,
-         ESerResponseStatus }                  from "./enums";
+         ESerResponseStatusSmaler5 }                  from "./enums";
 //#endregion
 
 export interface ISERRequestStart extends ISerConfig {
@@ -20,16 +20,27 @@ export interface ISERResponseStart {
     taskId: string;
 }
 
+export interface IConnectorResponse {
+    status: number;
+    taskId?: string;
+    managedTasks: any[];
+    jobResults: any[];
+    log?: string;
+    distribute?: string;
+    version?: string;
+    externalPackageInfo?: string;
+}
+
 export interface ISERResponseStatusVersion {
     name: string;
     version: string;
 }
 
 export interface ISERResponseStatus {
-    status: ESerResponseStatus;
+    status: ESerResponseStatusSmaler5;
     log: string;
     taskId: string;
-    versions: ISERResponseStatusVersion[];
+    version: string;
     distribute: string
 }
 
