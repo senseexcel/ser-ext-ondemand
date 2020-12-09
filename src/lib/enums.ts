@@ -29,6 +29,7 @@ export enum ESerResponseStatus {
     serDeleveryReport = 2,
     serFinished = 3,
     serStopping = 4,
+    serWarning = 5,
     serVersion = 100
 }
 

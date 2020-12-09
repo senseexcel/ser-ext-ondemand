@@ -1,7 +1,6 @@
 //#region imports
 import "css!./ser-ext-ondemandDirective.css";
 import * as template from "text!./ser-ext-ondemandDirective.html";
-import { isNull } from "util";
 import { utils, directives } from "./node_modules/davinci.js/dist/umd/daVinci";
 import { ISerGeneral, ISerConnection, SelectionType, ISerTemplate, ISerSenseSelection } from "./node_modules/ser.api/index";
 import { IProperties, ISERRequestStart, ISerReportExtended, ISERResponseStart, ISERResponseStatus, ISERRequestStatus, ILibrary, IDistribute, IDistributeNew, IConnectorResponse } from "./lib/interfaces";
@@ -76,10 +75,6 @@ class OnDemandController implements ng.IController {
                 v = ESERState.ready;
             }
 
-            console.log("############")
-            console.log("1", this.state)
-            console.log("2", v)
-            console.log("############")
             if (this.versionGreaterEqual5) {
                 if (this.state === ESERState.error && v !== ESERState.serNotRunning && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
                     v = ESERState.error;
@@ -186,6 +181,7 @@ class OnDemandController implements ng.IController {
 
                 default:
                     this.interactOptions(false, false, false);
+                    this.taskId = undefined;
                     this.title = "Error while running - Retry";
                     break;
             }
@@ -282,7 +278,7 @@ class OnDemandController implements ng.IController {
             }
             this.tempContentLibIndex = properties.templateContentLibrary;
 
-            if (isNull(properties.template)) {
+            if (properties.template === null) {
                 this.noPropertiesSet = true;
                 this.state = ESERState.noProperties;
             } else {
@@ -766,6 +762,10 @@ class OnDemandController implements ng.IController {
                     this.taskId = undefined;
                     this.state = ESERState.ready;
                     break;
+
+                case ESerResponseStatus.serWarning:
+                    this.state = ESERState.finished;
+                    break;
     
                 default:
                     this.state = ESERState.error;
@@ -807,19 +807,20 @@ class OnDemandController implements ng.IController {
 
     private async getStatus(taskId: string) {
 
+        if (this.state === ESERState.error && this.versionGreaterEqual5) {
+            return;
+        }
+
         if (this.links !== undefined && this.links.length > 0) {
             this.logger.trace("download link still available");
             return;
         }
 
-        // TODO check status === 100
-        // let askedForVersion = true;
         let reqestJson: ISERRequestStatus = {
             "versions": EVersionOption[EVersionOption.all]
         };
 
         if (taskId !== null && taskId !== undefined) {
-            // askedForVersion = false;
             reqestJson = {
                 "taskId": `${taskId}`
             };
@@ -831,7 +832,7 @@ class OnDemandController implements ng.IController {
             let response = await this.model.app.evaluate(serCall);
             this.logger.debug("response from status call: ", response);
 
-            // TODO remove in >= 5
+            // only required for reportin engines smaler 5
             this.timeoutResponseRevieved = true;
 
             let statusObject = this.evaluateStatusResult(response);
@@ -849,20 +850,17 @@ class OnDemandController implements ng.IController {
                 this.taskId = statusObject.taskId;
             }
 
-            if (typeof (statusObject.distribute) !== "undefined") {
-                this.distribute = statusObject.distribute;
-            }
+                if (typeof (statusObject.distribute) !== "undefined") {
+                    this.distribute = statusObject.distribute;
+                }
 
             this.logger.debug("statusObject.Status", statusObject.status);
 
-            // if (askedForVersion) {
-            //     statusObject.status = 100;
-            // }
             this.mapSerStatusAndSetStatus(statusObject.status)
             return;
 
         } catch (error) {
-            this.logger.error("####################", error);
+            this.logger.error("error occured in get Status", error);
             this.state = ESERState.serNotRunning;
             return;
         }
