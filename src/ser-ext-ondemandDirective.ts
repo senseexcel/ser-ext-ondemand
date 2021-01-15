@@ -61,25 +61,30 @@ class OnDemandController implements ng.IController {
             this.logger.trace("old STATE private: ", ESERState[this._state]);
             this.logger.trace("old STATE public: ", ESERState[this.state]);
 
-            if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
-                this.logger.debug("in old state status will be fall back to starting");
-                this.readyStateCounter++;
-                return;
+            if (!this.versionGreaterEqual5) {
+                if (this._state === ESERState.starting && (v === ESERState.ready || v === ESERState.finished) && this.readyStateCounter < 5) {
+                    this.logger.debug("in old state status will be fall back to starting");
+                    this.readyStateCounter++;
+                    return;
+                }
             }
 
             if (this.noPropertiesSet && v != ESERState.errorInsufficentRights) {
                 v = ESERState.noProperties;
             }
 
-            if (this.reportDownloaded && v === ESERState.finished) {
-                v = ESERState.ready;
-            }
 
             if (this.versionGreaterEqual5) {
+                if (this.reportDownloaded && this._state === ESERState.finished) {
+                    v = ESERState.ready;
+                }
                 if (this.state === ESERState.error && v !== ESERState.serNotRunning && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
                     v = ESERState.error;
                 }
             } else {
+                if (this.reportDownloaded && v === ESERState.finished) {
+                    v = ESERState.ready;
+                }
                 if (this.state === ESERState.error && v !== ESERState.ready && v !== ESERState.running && v !== ESERState.starting) {
                     v = ESERState.error;
                 }
@@ -746,6 +751,7 @@ class OnDemandController implements ng.IController {
                         break;
                 case ESerResponseStatus.serCreatingReport:
                     this.state = ESERState.starting;
+                    this.reportDownloaded = false;
                     break;
                 case ESerResponseStatus.serRunning:
                     this.state = ESERState.running;
@@ -837,7 +843,7 @@ class OnDemandController implements ng.IController {
 
             let statusObject = this.evaluateStatusResult(response);
             if (statusObject === null || statusObject === undefined) {
-                throw "error";
+                throw "error, status object empty";
             }
 
             if (this.version === null || this.version === undefined) {
@@ -854,12 +860,13 @@ class OnDemandController implements ng.IController {
                     this.distribute = statusObject.distribute;
                 }
 
-            this.logger.debug("statusObject.Status", statusObject.status);
+            this.logger.debug("statusObject.Status: ", statusObject.status);
 
             this.mapSerStatusAndSetStatus(statusObject.status)
             return;
 
         } catch (error) {
+            console.error("error occured in get Status", error);
             this.logger.error("error occured in get Status", error);
             this.state = ESERState.serNotRunning;
             return;
