@@ -129,29 +129,70 @@ let properties = {
                             }
                         },
                         output: {
-                            ref: "properties.output",
-                            label: "Output Format",
-                            component: "dropdown",
-                            options: [{
-                                value: "pdf",
-                                label: "PDF"
-                            }, {
-                                value: "xlsx",
-                                label: "Excel (xlsx)"
-                            }, {
-                                value: "xlsb",
-                                label: "Excel (xlsb)"
-                            }, {
-                                value: "xlsm",
-                                label: "Excel (xlsm)"
-                            }, {
-                                value: "docx",
-                                label: "Word"
-                            }, {
-                                value: "pptx",
-                                label: "PowerPoint"
-                            }],
-                            defaultValue: "pdf"
+                            type: "items",
+                            grouped: false,
+                            items: {
+                                activateManualOutputName: {
+                                    type: "boolean",
+                                    component: "switch",
+                                    label: "Activate Manual Outputname",
+                                    ref: "properties.manualOutputname",
+                                    options: [{
+                                        value: true,
+                                        label: "On"
+                                    }, {
+                                        value: false,
+                                        label: "Not On"
+                                    }],
+                                    defaultValue: false
+
+                                },
+                                activateManualOutputNameDesc: {
+                                    label: "Default Output name is \"OnDemand - <App Name>\"",
+                                    type:"string",
+                                    component: "text"
+                                },
+                                outputName: {
+                                    type: "items",
+                                    grouped: false,
+                                    items:{
+                                        outputNameValue: {
+                                            ref: "properties.outputNameValue",
+                                            label: "Output Name",
+                                            type: "string",
+                                            expression: "optional",
+                                            show: function(a) {
+                                                return a.properties.manualOutputname
+                                            }
+                                        }
+                                    }
+                                },
+                                outputFormat: {
+                                    ref: "properties.output",
+                                    label: "Output Format",
+                                    component: "dropdown",
+                                    options: [{
+                                        value: "pdf",
+                                        label: "PDF"
+                                    }, {
+                                        value: "xlsx",
+                                        label: "Excel (xlsx)"
+                                    }, {
+                                        value: "xlsb",
+                                        label: "Excel (xlsb)"
+                                    }, {
+                                        value: "xlsm",
+                                        label: "Excel (xlsm)"
+                                    }, {
+                                        value: "docx",
+                                        label: "Word"
+                                    }, {
+                                        value: "pptx",
+                                        label: "PowerPoint"
+                                    }],
+                                    defaultValue: "pdf"
+                                }
+                            }
                         },
                         selection: {
                             type: "items",

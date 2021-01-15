@@ -92,6 +92,8 @@ export interface IProperties {
     toggleCalculationCondition?: boolean;
     calculationConditionFcn?: string;
     calculationConditionText?: string;
+    outputNameValue?: string;
+    manualOutputname?: boolean;
 }
 
 export interface INxAppPropertiesExtended extends EngineAPI.INxAppProperties {

@@ -37,6 +37,7 @@ class OnDemandController implements ng.IController {
     };
     private username: string;
     private tempContentLibIndex: number;
+    private outputName: string;
     private taskId: string;
     private timeoutAfterStop = 2000;
     private reportDownloaded = false;
@@ -271,6 +272,18 @@ class OnDemandController implements ng.IController {
             const objectProperties = await model.getProperties()
             const properties: IProperties = objectProperties.properties
 
+            if (properties.manualOutputname && properties.outputNameValue!== null && properties.outputNameValue !== undefined) {
+                if (typeof((properties.outputNameValue as any).qStringExpression) !== "undefined" ) {
+                    let a = (properties.outputNameValue as any).qStringExpression.qExpr
+                    let b = await this.model.app.evaluateEx(a);
+                    this.outputName = b.qText?b.qText:b.qNumber.toString();
+                } else {
+                    this.outputName = properties.outputNameValue
+                }
+            } else {
+                this.outputName = `OnDemand-${this.app.appName}`
+            }
+
             if (typeof(properties) !== "undefined" && typeof(properties.loglevel) !== "undefined") {
                 this.logger.setLogLvl(properties.loglevel)
             }
@@ -348,7 +361,7 @@ class OnDemandController implements ng.IController {
         let connection: ISerConnection;
         let template: ISerTemplate = {
             input: this.properties.template,
-            output: `OnDemand-${this.app.appName}`,
+            output: this.outputName,
             outputFormat: this.properties.output,
             selectionsClearAll: false
         };
@@ -368,7 +381,7 @@ class OnDemandController implements ng.IController {
                 };
                 template = {
                     input: this.properties.template,
-                    output: `OnDemand-${this.app.appName}`,
+                    output: this.outputName,
                     outputFormat: this.properties.output,
                     selections: selections
                 };
