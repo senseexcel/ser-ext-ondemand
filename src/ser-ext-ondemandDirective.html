@@ -4,7 +4,7 @@
      <div class="button-wrapper">
 
           <div ng-click="vm.action()" class="ser-button lui-button lui-button--rounded lui-button--info"
-               ng-class="{'inactive': vm.inactive }"
+               ng-class="{'inactive': vm.inactive, 'download-report': vm.title === 'Download Report' }"
 
                q2g-shortcut shortcut="[{name:'enter', shortcut:'strg + alt + 82', rootscope: '|global|'}]"
                shortcut-action="vm.action()">
