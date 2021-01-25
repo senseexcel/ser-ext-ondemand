@@ -148,7 +148,13 @@ let properties = {
 
                                 },
                                 activateManualOutputNameDesc: {
-                                    label: "Default Output name is \"OnDemand - <App Name>\"",
+                                    label: function (a) {
+                                        const message = $("div[tid='activateManualOutputNameDesc']")
+                                        .find(".message");
+                                        if (message.length&&(!message[0].innerText||message[0].innerText==="")) {
+                                            message.html("<div>Default Output name is:</br>\"OnDemand-Appname\"</div>");
+                                        }
+                                    },
                                     type:"string",
                                     component: "text"
                                 },
