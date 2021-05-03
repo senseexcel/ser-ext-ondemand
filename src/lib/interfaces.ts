@@ -75,6 +75,7 @@ export interface ISERDistribute {
 export interface ISERHub {
     mode: string;
     connections: string;
+    active: boolean;
 }
 
 export interface ILayout {
