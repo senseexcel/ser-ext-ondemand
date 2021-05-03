@@ -1,6 +1,6 @@
 {
   "name": "ser-ext-ondemand",
-  "version": "5.0.0",
+  "version": "5.0.1",
   "license": "MIT",
   "description": "extension to create a on demand from a sense application",
   "repository": {

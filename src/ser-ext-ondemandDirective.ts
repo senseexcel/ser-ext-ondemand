@@ -402,7 +402,7 @@ class OnDemandController implements ng.IController {
             distribute: {
                 hub: {
                     connections: "@CONFIGCONNECTION@",
-                    mode: "DeleteAllFirst"
+                    mode: "Override"
                 }
             }
         };
