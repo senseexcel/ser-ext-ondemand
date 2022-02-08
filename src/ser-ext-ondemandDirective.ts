@@ -498,7 +498,7 @@ class OnDemandController implements ng.IController {
                 values: []
             };
             for (const value of selections) {
-                serSelection.values.push(`*${value.qName}`);
+                serSelection.values.push(`''${value.qName}''`);
             }
             return serSelection;
     }
@@ -508,7 +508,7 @@ class OnDemandController implements ng.IController {
             objectType: "Field",
             type: SelectionType.Static,
             name: field.replace(/'/g, "''"),
-            values: [textSearch]
+            values: [textSearch.replace(/'/g, "''")]
         };
         return serSelection;
     }
