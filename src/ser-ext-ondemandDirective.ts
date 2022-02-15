@@ -491,16 +491,26 @@ class OnDemandController implements ng.IController {
     }
 
     private createSerSelectionSelectionObject(field: string, selections: {qName: string, qFieldSelectionMode: string}[]): ISerSenseSelection {
-            let serSelection: ISerSenseSelection = {
-                objectType: "Field",
-                type: SelectionType.Static,
-                name: field.replace(/'/g, "''"),
-                values: []
-            };
-            for (const value of selections) {
-                serSelection.values.push(`''${value.qName}''`);
+        let fcnTesterName = field.substr(0,1)==="="?true:false;
+        let serSelection: ISerSenseSelection = {
+            objectType: "Field",
+            type: SelectionType.Static,
+            name: field.replace(/'/g, "''"),
+            values: []
+        };
+        let assistCounter = 0;
+        let assistField = field.replace(/'/g, "''").replace("=", "")
+        let selectionString = `=Match(${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"},`;
+        for (const value of selections) {
+            if (assistCounter > 0) {
+                selectionString += " , ";
             }
-            return serSelection;
+            selectionString += `''${value.qName}''`;
+            assistCounter++;
+        }
+        selectionString +=`)`
+        serSelection.values.push(selectionString);
+        return serSelection;
     }
 
     private createSerSelectionOverTextSearch(field: string, textSearch: string): ISerSenseSelection {
@@ -560,28 +570,31 @@ class OnDemandController implements ng.IController {
         const assistObject = await this.model.app.createSessionObject(parameter);
         const assistLayout: EngineAPI.IGenericListLayout = await assistObject.getLayout() as EngineAPI.IGenericListLayout;
 
-        let selectionString = "=";
+        let selectionString = "";
         let counter = 0;
         let assistField = field.replace(/'/g, "''").replace("=", "")
 
         if (negation) {
+            selectionString = `=Not Match(${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"},`;
             assistLayout.qListObject.qDataPages[0].qMatrix.forEach((row) => {
                 if (counter > 0) {
-                    selectionString += " and ";
+                    selectionString += " , ";
                 }
-                selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}<>''${row[0].qText}''`;
+                selectionString += `''${row[0].qText}''`;
                 counter++;
             })
         } else {
+            selectionString = `=Match(${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"},`;
             assistLayout.qListObject.qDataPages[0].qMatrix.forEach((row) => {
                 if (counter > 0) {
-                    selectionString += " or ";
+                    selectionString += " , ";
                 }
-                selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}=''${row[0].qText}''`;
+                selectionString += `''${row[0].qText}''`;
                 counter++;
             })
         }
 
+        selectionString += `)`;
         serSelection.values.push(selectionString);
         return serSelection;
 
@@ -596,16 +609,17 @@ class OnDemandController implements ng.IController {
             name: field.replace(/'/g, "''"),
             values: []
         };
-        let selectionString = "=";
         let assistCounter = 0;
         let assistField = field.replace(/'/g, "''").replace("=", "")
+        let selectionString = `=Not Match(${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"},`;
         for (const value of selections) {
             if (assistCounter > 0) {
-                selectionString += " and ";
+                selectionString += " , ";
             }
-            selectionString += `${fcnTesterName?"":"["}${assistField}${fcnTesterName?"":"]"}<>''${value.qName}''`;
+            selectionString += `''${value.qName}''`;
             assistCounter++;
         }
+        selectionString +=`)`
         serSelection.values.push(selectionString);
         return serSelection;
     }
