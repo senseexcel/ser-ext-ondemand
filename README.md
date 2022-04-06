@@ -1,5 +1,8 @@
 # SER on demand extension
 
+##This repository is moved to another location and is now archived.
+
+
 [![Codacy Badge](https://api.codacy.com/project/badge/Grade/d01698c7b7b941d7b8ee4583dfdb283c)](https://app.codacy.com/app/konne/ser-ext-ondemand?utm_source=github.com&utm_medium=referral&utm_content=senseexcel/ser-ext-ondemand&utm_campaign=badger)
 [![TravisCI](https://travis-ci.org/senseexcel/ser-ext-ondemand.svg?branch=master)](https://travis-ci.org/senseexcel/ser-ext-ondemand)
 [![Downloads](https://m.sense2go.net/downloads.svg?q2g-ext-selector)](https://m.sense2go.net/extension-package)
